@@ -33,7 +33,7 @@ jobs:
           python src/train.py >> report.md 2>&1
 
       - name: Setup CML
-        uses: iterative/cml@v1
+        uses: iterative/setup-cml@v1
 
       - name: Post report to PR with CML
         # This step only runs for pull request events
