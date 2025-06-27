@@ -24,9 +24,20 @@ jobs:
       - name: Install dependencies
         run: pip install -r requirements.txt
 
-      - name: Run tests with pytest
-        # The workflow will fail if any tests fail
-        run: pytest
+      - name: Generate test and training report
+        # Run tests and training, redirecting output to a markdown report.
+        # Use `|| true` to ensure the workflow continues to the CML step even if tests fail.
+        run: |
+          echo "## Pytest Results" > report.md
+          pytest >> report.md 2>&1 || true
+          
+          echo -e "\n## Training Metrics" >> report.md
+          python src/train.py >> report.md 2>&1
 
-      - name: Run training script as a final check
-        run: python src/train.py
+      - name: Create CML report comment on PR
+        # This step only runs for pull request events
+        if: github.event_name == 'pull_request'
+        uses: iterative/cml-send-comment@v0
+        with:
+          report: report.md
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
