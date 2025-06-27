@@ -34,10 +34,12 @@ jobs:
           echo -e "\n## Training Metrics" >> report.md
           python src/train.py >> report.md 2>&1
 
-      - name: Create CML report comment on PR
+      - name: Setup CML
+        uses: iterative/cml@v2
+
+      - name: Post report to PR with CML
         # This step only runs for pull request events
         if: github.event_name == 'pull_request'
-        uses: iterative/cml-send-comment@v0
-        with:
-          report: report.md
-          repo-token: ${{ secrets.GITHUB_TOKEN }}
+        env:
+          repo_token: ${{ secrets.GITHUB_TOKEN }}
+        run: cml comment create report.md
