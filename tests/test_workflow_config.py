@@ -77,16 +77,15 @@ def test_workflow_docker_auth_configuration():
     # Check docker-build job
     docker_build_job = workflow['jobs']['docker-build']
     docker_auth_steps = [step for step in docker_build_job['steps'] 
-                        if step.get('name') == 'Docker Auth']
+                        if step.get('name') == 'Configure Docker Auth']
     
-    assert len(docker_auth_steps) == 1, "Should have exactly one Docker Auth step"
+    assert len(docker_auth_steps) == 1, "Should have exactly one Configure Docker Auth step"
     
     docker_auth_step = docker_auth_steps[0]
-    assert docker_auth_step['uses'] == 'docker/login-action@v3', "Should use docker/login-action@v3"
+    assert 'run' in docker_auth_step, "Should use 'run' command for gcloud auth configure-docker"
     
-    with_params = docker_auth_step['with']
-    assert with_params['username'] == 'oauth2accesstoken', "Username should be oauth2accesstoken"
-    assert with_params['password'] == '${{ steps.auth.outputs.access_token }}', \
-        "Password should reference the auth step output"
-    assert with_params['registry'] == '${{ env.GAR_LOCATION }}-docker.pkg.dev', \
-        "Registry should use GAR_LOCATION environment variable"
+    # Check that the run command uses gcloud auth configure-docker with GAR_LOCATION
+    run_command = docker_auth_step['run']
+    assert 'gcloud auth configure-docker' in run_command, "Should use gcloud auth configure-docker"
+    assert '${{ env.GAR_LOCATION }}-docker.pkg.dev' in run_command, "Should use GAR_LOCATION environment variable"
+    assert '--quiet' in run_command, "Should use --quiet flag"
