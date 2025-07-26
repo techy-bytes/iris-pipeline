@@ -1,0 +1,5 @@
+metric,value
+accuracy,0.8888888888888888
+num_samples,150
+num_features,4
+num_classes,3
