@@ -65,7 +65,7 @@ jobs:
         id: auth
         uses: 'google-github-actions/auth@v2'
         with:
-          credentials_json: '${{ secrets.GCP_SA_KEY }}'
+          credentials_file: 'github-actions-key.json'
 
       # Corrected Docker Auth step using the token from the 'auth' step
       - name: Docker Auth
@@ -95,7 +95,7 @@ jobs:
         id: auth
         uses: 'google-github-actions/auth@v2'
         with:
-          credentials_json: '${{ secrets.GCP_SA_KEY }}'
+          credentials_file: 'github-actions-key.json'
 
       - name: Deploy to GKE
         run: |-
