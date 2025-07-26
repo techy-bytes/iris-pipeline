@@ -1,0 +1,48 @@
+# Git
+.git
+.gitignore
+
+# Python cache files
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+
+# Virtual environments
+.env
+.venv
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Documentation
+README.md
+*.md
+
+# CI/CD
+.github/
+
+# Test files
+tests/
+
+# Temporary files
+*.tmp
+*.log
+metrics.csv
+
+# Model files (will be generated at runtime)
+*.pkl
+*.joblib
+models/
