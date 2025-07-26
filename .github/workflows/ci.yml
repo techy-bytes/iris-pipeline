@@ -64,7 +64,7 @@ jobs:
         id: auth
         uses: 'google-github-actions/auth@v2'
         with:
-          service_account: 'github-actions@buoyant-mason-461116-d8.iam.gserviceaccount.com'
+          credentials_json: '${{ secrets.GCP_SA_KEY }}'
 
       - name: Set up Cloud SDK
         uses: 'google-github-actions/setup-gcloud@v2'
@@ -91,7 +91,7 @@ jobs:
         id: auth
         uses: 'google-github-actions/auth@v2'
         with:
-          service_account: 'github-actions@buoyant-mason-461116-d8.iam.gserviceaccount.com'
+          credentials_json: '${{ secrets.GCP_SA_KEY }}'
 
       - name: Set up Cloud SDK
         uses: 'google-github-actions/setup-gcloud@v2'
