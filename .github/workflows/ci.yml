@@ -74,13 +74,9 @@ jobs:
           access_token_scopes: https://www.googleapis.com/auth/cloud-platform
           id_token_include_email: false
 
-      # Corrected Docker Auth step using the token from the 'auth' step
-      - name: Docker Auth
-        uses: 'docker/login-action@v3'
-        with:
-          registry: ${{ env.GAR_LOCATION }}-docker.pkg.dev
-          username: oauth2accesstoken
-          password: '${{ steps.auth.outputs.access_token }}'
+      # Configure Docker to use gcloud as credential helper
+      - name: Configure Docker Auth
+        run: gcloud auth configure-docker ${{ env.GAR_LOCATION }}-docker.pkg.dev --quiet
 
       - name: Build and Push Container
         run: |-
