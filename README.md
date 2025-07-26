@@ -357,13 +357,15 @@ uvicorn src.api:app --reload
 
 ### For Production Operations
 1. **Monitor health**: Check `/health` endpoint regularly
-2. **Scale as needed**: Use `kubectl scale deployment iris-api --replicas=N`
-3. **Update the app**: Push to main branch for automatic deployment
-4. **View logs**: `kubectl logs -f deployment/iris-api`
+2. **Verify deployment**: Use [`K8S_VERIFICATION.md`](./K8S_VERIFICATION.md) to check K8s integration
+3. **Scale as needed**: Use `kubectl scale deployment iris-api --replicas=N`
+4. **Update the app**: Push to main branch for automatic deployment
+5. **View logs**: `kubectl logs -f deployment/iris-api`
 
 ## 📚 Additional Resources
 
 - **Detailed GCP Setup**: [`Required_Commands.md`](./Required_Commands.md)
+- **Kubernetes Verification**: [`K8S_VERIFICATION.md`](./K8S_VERIFICATION.md) - How to verify your K8s deployment is working
 - **CI/CD Pipeline**: [`.github/workflows/ci.yml`](./.github/workflows/ci.yml)
 - **Kubernetes Config**: [`k8s/deployment.yaml`](./k8s/deployment.yaml)
 - **API Documentation**: Visit `http://your-api-url/docs` for interactive Swagger docs

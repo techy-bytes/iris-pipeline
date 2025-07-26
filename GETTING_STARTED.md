@@ -87,6 +87,10 @@ Use this checklist to get up and running quickly, whether for local development 
   ```
   Expected: API responds from production
 
+- [ ] **Verify K8s integration** 
+  - Follow [`K8S_VERIFICATION.md`](./K8S_VERIFICATION.md) for comprehensive verification
+  - Use the verification checklist to ensure everything works correctly
+
 **✅ You're live in production!**
 
 ---
