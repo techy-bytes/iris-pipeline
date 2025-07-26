@@ -45,7 +45,6 @@ jobs:
         uses: iterative/setup-cml@v1
 
       - name: Post report to PR with CML
-        # This step only runs for pull request events
         if: github.event_name == 'pull_request'
         env:
           repo_token: ${{ secrets.GITHUB_TOKEN }}
@@ -57,7 +56,7 @@ jobs:
     if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/dev'
     permissions:
       contents: read
-      id-token: write
+      id-token: write # Required for google-github-actions/auth
     steps:
       - name: Check out repository code
         uses: actions/checkout@v4
@@ -68,7 +67,7 @@ jobs:
         with:
           credentials_json: '${{ secrets.GCP_SA_KEY }}'
 
-      # Corrected Docker Auth step
+      # Corrected Docker Auth step using the token from the 'auth' step
       - name: Docker Auth
         uses: 'docker/login-action@v3'
         with:
@@ -87,7 +86,7 @@ jobs:
     if: github.ref == 'refs/heads/main'
     permissions:
       contents: read
-      id-token: write
+      id-token: write # Required for google-github-actions/auth
     steps:
       - name: Check out repository code
         uses: actions/checkout@v4
