@@ -1,0 +1,13 @@
+{
+  "type": "service_account",
+  "project_id": "buoyant-mason-461116-d8",
+  "private_key_id": "d54250668f742b1c68b5084601832eaa15080148",
+  "private_key": "-----BEGIN PRIVATE KEY-----\nMIIEvAIBADANBgkqhkiG9w0BAQEFAASCBKYwggSiAgEAAoIBAQCL+g7aPCdiQWFZ\nUp4Dr4p3loemsuclf4HIST9p3IvojCtcn+frxy4N/1n4f+/54F2q9nfEhtOXj994\ntOILzqmmfTcycUZ65Tb0s38SqsybO5uCt2BZYZJkrrkJwNx/Wt7oU1CFtd1lFCcq\ntSSjNiJFt9kSvXFzkxhqcXZpj98kaGyJM07lLoZAteIYoNrVn2FI4qi/Y8X1UXWJ\nckwHzrcDXu6yjmyzT4sjdzuGa5efsdkVCVvcRPII4DDaaJ8fxM3PtPrA/M5S+lPb\nH48Rizx3D9Xcyf4yqePWBW5/Ws2i1hibTRHsEzuuhANSHu9pGyjqRyq1XGYc0IGL\nGTA7zE4LAgMBAAECggEAB2eeIB+J6jg3ZdbDHI9nBBmDkCcRp3NEOQV3vdCYp1Lw\nh+QlP1zlJYED6bhQe3r9HLcQfrLiAATXF3CvyCkefC8bW7QQIusvCfXYe7/Rg0eK\nQl/gagoJb2fdl21k6YKaNr14wOhuHFOn5ZBfx+SF62mk3Mls9ky3QDyqI3Gkpi1t\n9GTIb5cZ12B44k0txSQByEpOqy36UO68a/ha2jpQSTkLqF+JGFsXgRljHkL5wvkN\nDhs/daA/2X9wl5t2LhqoriZNcd3tTJpj56/VCfpPpaG4b7Xy9W/HpFcQaf7GYFZN\nwB5FVNMk5+EVgQsQ4HG7g7FKkzo7Y/WihApsym26JQKBgQDDPBdIQ12eXvtqTBDa\nxnj8Oznbd6cgX9WHeCCHO8WeoY4xmHuua4AxK3V/UcYaTOen8xsYthhNROA6CNqZ\nwPXphopFXKLT0v9UqXclTn609MVXXWUI5nvy1srei/+h4Z0XZ0YCtbyK6Mn2ZSeN\nqSYhA2s8HLNgXkF0XMBUhT1vtwKBgQC3iyA7kD02tXeMcItbk5X5daaTLPGitA7R\ndgxCpziHoOcohk2ARPIl+lVaBdbG3ZpZIMk0NKHACgCIkBVMiJtWRDS6rmis58ef\n/B7JORo/SB8OQ50WTj6Ba+Z/XIsxIwyH9FK+M5BjRFXqauthlElrbE/V5SMUoaIi\nRZqkG1PsTQKBgEkD6jkuaI7YOvLQK+WGIK1EgSjhIPHspXEarh+lbQ0coo9N1cOv\nlKvO8wyAyrP/Wwvm0ZV2VLRhM/LAaPDjx5RkqsWyFXtfB/rjvhmHt795Y2x/E1A2\n0thJGGoOtbYXKKceCoLs8OyKjy3FOvux7P6fxrUejr9VwOkB3zQ8+HMVAoGAUoz8\nfk2teoG7tyqXQyTp+zzzIpbAR1F8qLDTatcTEc1Iqm1dRie8UWB6KvcdVmwtE5Ev\nbY+OgHT/MGy9Z6K5Wt9qZ9wxsDK/EjGvFwnbyEKD1UKL0JB4hHUnQnk5EWyWIj+9\nR1ahxkPh8IEOROEQ9IPOlIFuecUIyylLGCxCXrECgYBwKxK/FU+9KmBsHyyZt1UI\nXRgz8bYWq780RzKoJ5SOmU0dEeAg0yt4O0d8BLlFA9Ou27y+oRq5gU4HUceYFeQT\nu1QVArcLiNtYSKGHrBemGp145BkXmQYkw8sPY5I5+/uC5/BqPp/REm0gOyb2QXcz\n4ylO1TriPdRnhDlrMKHzNw==\n-----END PRIVATE KEY-----\n",
+  "client_email": "github-actions@buoyant-mason-461116-d8.iam.gserviceaccount.com",
+  "client_id": "113316206138106541438",
+  "auth_uri": "https://accounts.google.com/o/oauth2/auth",
+  "token_uri": "https://oauth2.googleapis.com/token",
+  "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",
+  "client_x509_cert_url": "https://www.googleapis.com/robot/v1/metadata/x509/github-actions%40buoyant-mason-461116-d8.iam.gserviceaccount.com",
+  "universe_domain": "googleapis.com"
+}
