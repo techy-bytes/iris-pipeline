@@ -73,3 +73,9 @@ metrics.csv
 # OS
 .DS_Store
 Thumbs.db
+
+# Credentials and secrets
+github-actions-key.json
+*.json.key
+*-key.json
+service-account-*.json

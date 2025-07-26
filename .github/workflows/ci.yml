@@ -65,7 +65,14 @@ jobs:
         id: auth
         uses: 'google-github-actions/auth@v2'
         with:
-          credentials_file: 'github-actions-key.json'
+          credentials_json: '${{ secrets.GCP_SA_KEY }}'
+          create_credentials_file: true
+          export_environment_variables: true
+          universe: googleapis.com
+          cleanup_credentials: true
+          access_token_lifetime: 3600s
+          access_token_scopes: https://www.googleapis.com/auth/cloud-platform
+          id_token_include_email: false
 
       # Corrected Docker Auth step using the token from the 'auth' step
       - name: Docker Auth
@@ -95,7 +102,14 @@ jobs:
         id: auth
         uses: 'google-github-actions/auth@v2'
         with:
-          credentials_file: 'github-actions-key.json'
+          credentials_json: '${{ secrets.GCP_SA_KEY }}'
+          create_credentials_file: true
+          export_environment_variables: true
+          universe: googleapis.com
+          cleanup_credentials: true
+          access_token_lifetime: 3600s
+          access_token_scopes: https://www.googleapis.com/auth/cloud-platform
+          id_token_include_email: false
 
       - name: Deploy to GKE
         run: |-
