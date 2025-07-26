@@ -16,7 +16,7 @@ spec:
     spec:
       containers:
       - name: iris-api
-        image: gcr.io/buoyant-mason-461116-d8/iris-api:latest
+        image: us-central1-docker.pkg.dev/PROJECT_ID/iris-api/iris-api:latest
         ports:
         - containerPort: 8000
         env:
