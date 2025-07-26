@@ -1,33 +1,58 @@
-# Required Commands for GCP Setup
+# 🚀 Google Cloud Platform Setup Guide
 
-This document outlines the manual steps required to set up the Google Cloud Platform (GCP) infrastructure for deploying the Iris API.
+This guide walks you through setting up the GCP infrastructure needed to deploy the Iris API to production.
 
-## Prerequisites
+## ⏱️ Time Required
+- **First time**: 20-30 minutes
+- **Experienced**: 10-15 minutes
 
-1. **Google Cloud Account**: Ensure you have access to a Google Cloud project
-2. **gcloud CLI**: Install and configure the Google Cloud CLI on your local machine
-3. **kubectl**: Install kubectl for Kubernetes cluster management
-4. **Docker**: Install Docker for local testing (optional)
+## 📋 Before You Start
 
-## GCP Setup Steps
+### Required Tools
+```bash
+# Install Google Cloud CLI
+curl https://sdk.cloud.google.com | bash
+exec -l $SHELL  # Restart shell
 
-### 1. Project Setup
+# Install kubectl
+gcloud components install kubectl
+
+# Verify installations
+gcloud --version
+kubectl version --client
+```
+
+### Required Accounts/Access
+- Google Cloud account with billing enabled
+- Admin access to your Google Cloud project
+- Admin access to your GitHub repository (for adding secrets)
+
+## 🏗️ Step-by-Step Setup
+
+### Step 1: Configure Your Project 🎯
 
 ```bash
-# Set your project ID
-export PROJECT_ID="your-project-id"
-gcloud config set project $PROJECT_ID
+# Replace with your actual project ID
+export PROJECT_ID="your-project-id-here"
 
-# Enable required APIs
+# Set the project and verify
+gcloud config set project $PROJECT_ID
+gcloud config get-value project  # Should show your project ID
+
+# Enable required APIs (takes 2-3 minutes)
+echo "Enabling required APIs..."
 gcloud services enable container.googleapis.com
 gcloud services enable containerregistry.googleapis.com
 gcloud services enable artifactregistry.googleapis.com
+
+echo "✅ APIs enabled successfully!"
 ```
 
-### 2. Create Google Kubernetes Engine (GKE) Cluster
+### Step 2: Create Kubernetes Cluster ⚙️
 
 ```bash
-# Create GKE cluster
+# Create the cluster (takes 5-10 minutes)
+echo "Creating GKE cluster (this will take several minutes)..."
 gcloud container clusters create iris-cluster \
     --region=us-central1 \
     --node-pool=default-pool \
@@ -42,30 +67,35 @@ gcloud container clusters create iris-cluster \
 
 # Get cluster credentials
 gcloud container clusters get-credentials iris-cluster --region=us-central1
+
+echo "✅ Cluster created successfully!"
 ```
 
-### 3. Set Up Artifact Registry
+### Step 3: Set Up Container Registry 📦
 
 ```bash
-# Create Artifact Registry repository
+# Create Docker repository
 gcloud artifacts repositories create iris-api \
     --repository-format=docker \
     --location=us-central1 \
     --description="Iris API Docker repository"
 
-# Configure Docker to use Artifact Registry
+# Configure Docker authentication
 gcloud auth configure-docker us-central1-docker.pkg.dev
+
+echo "✅ Artifact Registry configured!"
 ```
 
-### 4. Create Service Account for CI/CD
+### Step 4: Create Service Account 🔐
 
 ```bash
-# Create service account
+# Create service account for GitHub Actions
 gcloud iam service-accounts create github-actions \
     --display-name="GitHub Actions Service Account" \
     --description="Service account for GitHub Actions CI/CD"
 
-# Grant necessary permissions
+# Grant required permissions
+echo "Granting permissions..."
 gcloud projects add-iam-policy-binding $PROJECT_ID \
     --member="serviceAccount:github-actions@$PROJECT_ID.iam.gserviceaccount.com" \
     --role="roles/container.developer"
@@ -78,76 +108,102 @@ gcloud projects add-iam-policy-binding $PROJECT_ID \
     --member="serviceAccount:github-actions@$PROJECT_ID.iam.gserviceaccount.com" \
     --role="roles/container.clusterAdmin"
 
-# Create and download service account key
+# Create and download the key
 gcloud iam service-accounts keys create github-actions-key.json \
     --iam-account=github-actions@$PROJECT_ID.iam.gserviceaccount.com
+
+echo "✅ Service account created! Key saved to github-actions-key.json"
 ```
 
-### 5. GitHub Secrets Configuration
+### Step 5: Configure GitHub Secrets 🔑
 
-In your GitHub repository, go to Settings > Secrets and variables > Actions, and add the following secrets:
+**In your GitHub repository:**
 
-1. **GCP_PROJECT_ID**: Your Google Cloud project ID
-2. **GCP_SA_KEY**: Contents of the `github-actions-key.json` file (the entire JSON content)
+1. Go to **Settings** → **Secrets and variables** → **Actions**
+2. Click **New repository secret** and add:
 
-### 6. Initial Deployment (Manual)
+| Secret Name | Value | Where to find it |
+|-------------|-------|------------------|
+| `GCP_PROJECT_ID` | `your-project-id` | The PROJECT_ID you set above |
+| `GCP_SA_KEY` | `{entire JSON content}` | Copy ALL contents of `github-actions-key.json` |
 
-For the first deployment, you may need to manually apply the Kubernetes manifests:
+**⚠️ Important**: For `GCP_SA_KEY`, copy the ENTIRE contents of the JSON file, including the outer `{` and `}`.
+
+### Step 6: Test the Setup ✅
 
 ```bash
-# Update the PROJECT_ID in the deployment manifest
+# Update deployment with your project ID
 sed -i "s|PROJECT_ID|$PROJECT_ID|g" k8s/deployment.yaml
 
-# Apply the Kubernetes manifests
+# Apply the Kubernetes manifests manually (first time only)
 kubectl apply -f k8s/deployment.yaml
 
-# Check deployment status
+# Check if everything is working
+echo "Checking deployment status..."
 kubectl get pods -l app=iris-api
 kubectl get services
+
+echo "✅ Setup complete! Push to main branch to trigger automatic deployment."
 ```
 
-### 7. Verify Setup
+## 🔍 Verification & Testing
 
+### Check Your Deployment
 ```bash
-# Check if the service is running
+# 1. Verify pods are running
 kubectl get pods -l app=iris-api
+# Expected: 2 pods in "Running" status
 
-# Get external IP (may take a few minutes)
+# 2. Check service status  
 kubectl get service iris-api-service
+# Expected: External IP assigned (may take 2-5 minutes)
 
-# Test the API (replace EXTERNAL_IP with actual IP)
-curl http://EXTERNAL_IP/health
+# 3. Test the API
+EXTERNAL_IP=$(kubectl get service iris-api-service -o jsonpath='{.status.loadBalancer.ingress[0].ip}')
+echo "Testing API at: http://$EXTERNAL_IP"
+curl http://$EXTERNAL_IP/health
+
+# Expected response:
+# {"status":"healthy","model_loaded":true,"feature_names":[...],"classes":[...]}
 ```
 
-## Monitoring and Maintenance
-
-### View Logs
+### View Application Logs
 ```bash
-# View application logs
-kubectl logs -l app=iris-api
-
-# Follow logs in real-time
+# Real-time logs from all pods
 kubectl logs -f deployment/iris-api
+
+# Logs from specific pod
+kubectl logs -l app=iris-api --tail=50
 ```
 
-### Scale the Application
-```bash
-# Scale to 3 replicas
-kubectl scale deployment iris-api --replicas=3
+## 🔧 Operations & Maintenance
 
-# Check scaling status
-kubectl get pods -l app=iris-api
+### Scaling
+```bash
+# Scale to more replicas
+kubectl scale deployment iris-api --replicas=5
+
+# Check autoscaling status
+kubectl get hpa iris-api-hpa
 ```
 
-### Update the Application
-The CI/CD pipeline will automatically update the application when changes are pushed to the main branch. You can also manually update:
-
+### Updates
+After pushing to main branch, GitHub Actions handles updates automatically. Monitor with:
 ```bash
-# Update deployment image
+# Watch deployment rollout
+kubectl rollout status deployment/iris-api
+
+# Check deployment history
+kubectl rollout history deployment/iris-api
+```
+
+### Manual Update (if needed)
+```bash
+# Update to specific image
 kubectl set image deployment/iris-api iris-api=us-central1-docker.pkg.dev/$PROJECT_ID/iris-api/iris-api:latest
 
-# Check rollout status
-kubectl rollout status deployment/iris-api
+# Restart deployment
+kubectl rollout restart deployment/iris-api
 ```
 
 ## Cleanup
@@ -168,26 +224,72 @@ gcloud artifacts repositories delete iris-api --location=us-central1
 gcloud iam service-accounts delete github-actions@$PROJECT_ID.iam.gserviceaccount.com
 ```
 
-## Troubleshooting
+## ❗ Troubleshooting
 
-### Common Issues
+### Common Setup Issues
 
-1. **Authentication Issues**: Make sure the service account has the correct permissions
-2. **Image Pull Errors**: Verify that the Artifact Registry is set up correctly and the image exists
-3. **Pod Startup Issues**: Check pod logs using `kubectl logs`
-4. **Service Not Accessible**: Ensure the LoadBalancer service has an external IP assigned
-
-### Useful Commands
-
+#### "Permission denied" errors
 ```bash
-# Debug pod issues
-kubectl describe pods -l app=iris-api
+# Make sure you're authenticated
+gcloud auth login
+gcloud auth application-default login
 
-# Check events
+# Verify your project
+gcloud config get-value project
+```
+
+#### "Cluster not found" errors
+```bash
+# Make sure you're connected to the right cluster
+gcloud container clusters get-credentials iris-cluster --region=us-central1
+
+# Verify connection
+kubectl cluster-info
+```
+
+#### "Pods stuck in Pending state"
+```bash
+# Check node resources
+kubectl get nodes
+kubectl describe nodes
+
+# Check pod events
+kubectl describe pods -l app=iris-api
+```
+
+#### "External IP stuck on <pending>"
+```bash
+# Check service events
+kubectl describe service iris-api-service
+
+# This is normal for first 2-5 minutes
+# If stuck longer, check Google Cloud Console → Network Services → Load Balancing
+```
+
+#### "GitHub Actions failing"
+1. **Check secrets**: Go to GitHub repo → Settings → Secrets → Actions
+   - `GCP_PROJECT_ID` should be your project ID
+   - `GCP_SA_KEY` should be the FULL JSON content (including braces)
+
+2. **Check service account permissions**:
+   ```bash
+   # Verify service account exists
+   gcloud iam service-accounts list | grep github-actions
+   
+   # Check permissions
+   gcloud projects get-iam-policy $PROJECT_ID --flatten="bindings[].members" --filter="bindings.members:github-actions@$PROJECT_ID.iam.gserviceaccount.com"
+   ```
+
+### Getting Help
+```bash
+# Check all resources
+kubectl get all -l app=iris-api
+
+# View events
 kubectl get events --sort-by=.metadata.creationTimestamp
 
-# Port forward for local testing
-kubectl port-forward service/iris-api-service 8080:80
+# Debug pod issues
+kubectl describe pods -l app=iris-api
 ```
 
 ## Security Considerations
