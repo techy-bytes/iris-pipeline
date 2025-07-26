@@ -5,30 +5,26 @@ import yaml
 import json
 
 
-def test_github_actions_key_file_exists():
-    """Test that the github-actions-key.json file exists."""
+def test_github_actions_credentials_not_in_repo():
+    """Test that the github-actions-key.json file is not in the repository."""
     key_file_path = "github-actions-key.json"
-    assert os.path.exists(key_file_path), "github-actions-key.json file should exist"
+    assert not os.path.exists(key_file_path), "github-actions-key.json file should not be in repository for security"
 
 
-def test_github_actions_key_file_is_valid_json():
-    """Test that the github-actions-key.json file contains valid JSON."""
-    key_file_path = "github-actions-key.json"
+def test_gitignore_excludes_credentials():
+    """Test that .gitignore excludes credential files."""
+    gitignore_path = ".gitignore"
+    assert os.path.exists(gitignore_path), ".gitignore file should exist"
     
-    with open(key_file_path, 'r') as f:
-        try:
-            credentials = json.load(f)
-        except json.JSONDecodeError:
-            assert False, "github-actions-key.json should contain valid JSON"
+    with open(gitignore_path, 'r') as f:
+        gitignore_content = f.read()
     
-    # Check that required fields are present
-    required_fields = ["type", "project_id", "private_key", "client_email"]
-    for field in required_fields:
-        assert field in credentials, f"Required field '{field}' should be present in credentials"
+    assert "github-actions-key.json" in gitignore_content, ".gitignore should exclude github-actions-key.json"
+    assert "*.json.key" in gitignore_content, ".gitignore should exclude *.json.key files"
 
 
-def test_workflow_uses_local_credentials_file():
-    """Test that the CI workflow is configured to use the local credentials file."""
+def test_workflow_uses_credentials_json():
+    """Test that the CI workflow is configured to use credentials_json with GitHub secrets."""
     workflow_path = ".github/workflows/ci.yml"
     assert os.path.exists(workflow_path), "CI workflow file should exist"
     
@@ -43,9 +39,20 @@ def test_workflow_uses_local_credentials_file():
     assert len(google_auth_steps) == 1, "Should have exactly one Google Auth step in docker-build job"
     
     auth_step = google_auth_steps[0]
-    assert 'credentials_file' in auth_step['with'], "Should use credentials_file parameter"
-    assert auth_step['with']['credentials_file'] == 'github-actions-key.json', \
-        "Should reference the local github-actions-key.json file"
+    assert 'credentials_json' in auth_step['with'], "Should use credentials_json parameter"
+    assert auth_step['with']['credentials_json'] == '${{ secrets.GCP_SA_KEY }}', \
+        "Should reference the GCP_SA_KEY secret"
+    
+    # Check for required configuration parameters
+    with_params = auth_step['with']
+    assert with_params.get('create_credentials_file') == True, "Should set create_credentials_file to true"
+    assert with_params.get('export_environment_variables') == True, "Should set export_environment_variables to true"
+    assert with_params.get('universe') == 'googleapis.com', "Should set universe to googleapis.com"
+    assert with_params.get('cleanup_credentials') == True, "Should set cleanup_credentials to true"
+    assert with_params.get('access_token_lifetime') == '3600s', "Should set access_token_lifetime to 3600s"
+    assert with_params.get('access_token_scopes') == 'https://www.googleapis.com/auth/cloud-platform', \
+        "Should set access_token_scopes to cloud-platform"
+    assert with_params.get('id_token_include_email') == False, "Should set id_token_include_email to false"
     
     # Check deploy job
     deploy_job = workflow['jobs']['deploy']
@@ -55,9 +62,9 @@ def test_workflow_uses_local_credentials_file():
     assert len(google_auth_steps) == 1, "Should have exactly one Google Auth step in deploy job"
     
     auth_step = google_auth_steps[0]
-    assert 'credentials_file' in auth_step['with'], "Should use credentials_file parameter"
-    assert auth_step['with']['credentials_file'] == 'github-actions-key.json', \
-        "Should reference the local github-actions-key.json file"
+    assert 'credentials_json' in auth_step['with'], "Should use credentials_json parameter"
+    assert auth_step['with']['credentials_json'] == '${{ secrets.GCP_SA_KEY }}', \
+        "Should reference the GCP_SA_KEY secret"
 
 
 def test_workflow_docker_auth_configuration():
