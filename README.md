@@ -1,6 +1,6 @@
 # Iris Classification Pipeline
 
-A complete **CI/CD pipeline** for training and deploying an Iris **classification** model as a **REST API** using **Docker** and **Kubernetes** on Google Cloud Platform.
+A complete **CI/CD pipeline** for **training** and **deploying** an Iris **classification** model as a **REST API** using **Docker** and **Kubernetes** on Google Cloud Platform.
 
 > **✅ Project Status**:- Fully functional and ready to use! All tests pass, model training works, API responds correctly.
 
