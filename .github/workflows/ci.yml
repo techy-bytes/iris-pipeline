@@ -82,7 +82,8 @@ jobs:
     needs: docker-build
     if: github.ref == 'refs/heads/main'
     permissions:
-      contents: read # Only read permission is needed here
+      contents: read
+      issues: write # Permission to create/comment on issues
     steps:
       - name: Check out repository code
         uses: actions/checkout@v4
@@ -125,10 +126,10 @@ jobs:
           echo "" >> deploy-report.md
           kubectl get service iris-api-service >> deploy-report.md
 
-      - name: Setup CML for deployment report
-        uses: iterative/setup-cml@v1
-
-      - name: Post deployment report
-        env:
-          repo_token: ${{ secrets.GITHUB_TOKEN }}
-        run: cml comment create deploy-report.md
+      - name: Create deployment issue
+        if: github.event_name == 'push'
+        uses: peter-evans/create-issue-from-file@v4
+        with:
+          title: "Deployment Report - ${{ github.sha }}"
+          content-filepath: deploy-report.md
+          labels: deployment, status
