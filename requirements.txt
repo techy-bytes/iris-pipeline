@@ -5,3 +5,5 @@ fastapi
 uvicorn[standard]
 pydantic
 httpx
+opentelemetry-api
+opentelemetry-sdk

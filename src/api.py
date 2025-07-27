@@ -9,6 +9,19 @@ import os
 from typing import List
 from contextlib import asynccontextmanager
 
+# OpenTelemetry imports
+from opentelemetry import trace
+from opentelemetry.sdk.trace import TracerProvider
+from opentelemetry.sdk.trace.export import ConsoleSpanExporter, BatchSpanProcessor
+
+# Initialize OpenTelemetry
+trace.set_tracer_provider(TracerProvider())
+tracer = trace.get_tracer(__name__)
+
+# Add console exporter for demonstration (in production, you'd use a proper exporter)
+span_processor = BatchSpanProcessor(ConsoleSpanExporter())
+trace.get_tracer_provider().add_span_processor(span_processor)
+
 # Global variables for model and label encoder
 model = None
 label_encoder = None
@@ -150,9 +163,15 @@ async def predict_batch(features_list: List[IrisFeatures]):
         
         feature_matrix = np.array(feature_arrays)
         
-        # Make predictions
-        predictions = model.predict(feature_matrix)
-        probabilities = model.predict_proba(feature_matrix)
+        # Make predictions with OpenTelemetry instrumentation
+        with tracer.start_as_current_span("model_prediction_batch") as span:
+            # Add span attributes for observability
+            span.set_attribute("batch_size", len(features_list))
+            span.set_attribute("model_type", "RandomForestClassifier")
+            span.set_attribute("feature_count", feature_matrix.shape[1])
+            
+            predictions = model.predict(feature_matrix)
+            probabilities = model.predict_proba(feature_matrix)
         
         # Decode predictions
         results = []
