@@ -1,10 +1,16 @@
-name: CI Pipeline
+name: CI/CD Pipeline
 
 on:
   push:
-    branches: [ dev ]
+    branches: [ dev, main ]
   pull_request:
     branches: [ main ]
+
+env:
+  PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
+  GAR_LOCATION: us-central1
+  SERVICE: iris-api
+  REGION: us-central1 # Using REGION for consistency
 
 jobs:
   build-and-test:
@@ -12,7 +18,6 @@ jobs:
     permissions:
       contents: read
       pull-requests: write
-
     steps:
       - name: Check out repository code
         uses: actions/checkout@v4
@@ -21,18 +26,18 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: '3.10'
-          cache: 'pip' # cache pip dependencies to speed up future runs
+          cache: 'pip'
 
       - name: Install dependencies
         run: pip install -r requirements.txt
 
-      - name: Generate test and training report
-        # Run tests and training, redirecting output to a markdown report.
-        # Use `|| true` to ensure the workflow continues to the CML step even if tests fail.
+      - name: Run tests
         run: |
-          echo "## Pytest Results" > report.md
-          pytest >> report.md 2>&1 || true
-          
+          echo "## Test Results" > report.md
+          pytest -v >> report.md 2>&1 || true
+
+      - name: Generate training report
+        run: |
           echo -e "\n## Training Metrics" >> report.md
           python src/train.py >> report.md 2>&1
 
@@ -40,8 +45,90 @@ jobs:
         uses: iterative/setup-cml@v1
 
       - name: Post report to PR with CML
-        # This step only runs for pull request events
         if: github.event_name == 'pull_request'
         env:
           repo_token: ${{ secrets.GITHUB_TOKEN }}
         run: cml comment create report.md
+
+  docker-build:
+    runs-on: ubuntu-latest
+    needs: build-and-test
+    if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/dev'
+    permissions:
+      contents: read # Only read permission is needed here
+    steps:
+      - name: Check out repository code
+        uses: actions/checkout@v4
+
+      - name: Authenticate to Google Cloud
+        id: auth
+        uses: 'google-github-actions/auth@v2'
+        with:
+          credentials_json: '${{ secrets.GCP_SA_KEY }}'
+
+      - name: Set up Cloud SDK
+        uses: 'google-github-actions/setup-gcloud@v2'
+
+      - name: Configure Docker to use gcloud as credential helper
+        run: gcloud auth configure-docker ${{ env.GAR_LOCATION }}-docker.pkg.dev --quiet
+
+      - name: Build and Push Container
+        run: |-
+          docker build -t "${{ env.GAR_LOCATION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.SERVICE }}/${{ env.SERVICE }}:${{ github.sha }}" ./
+          docker push "${{ env.GAR_LOCATION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.SERVICE }}/${{ env.SERVICE }}:${{ github.sha }}"
+
+  deploy:
+    runs-on: ubuntu-latest
+    needs: docker-build
+    if: github.ref == 'refs/heads/main'
+    permissions:
+      contents: read # Only read permission is needed here
+    steps:
+      - name: Check out repository code
+        uses: actions/checkout@v4
+
+      - name: Authenticate to Google Cloud
+        id: auth
+        uses: 'google-github-actions/auth@v2'
+        with:
+          credentials_json: '${{ secrets.GCP_SA_KEY }}'
+
+      - name: Set up Cloud SDK
+        uses: 'google-github-actions/setup-gcloud@v2'
+
+      - name: Deploy to GKE
+        run: |-
+          # Install auth plugin
+          gcloud components install gke-gcloud-auth-plugin --quiet
+
+          # Get GKE credentials
+          gcloud container clusters get-credentials iris-cluster --zone=us-central1-a
+
+          # Update image in Kubernetes manifest robustly
+          sed -i "s|image:.*|image: ${{ env.GAR_LOCATION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.SERVICE }}/${{ env.SERVICE }}:${{ github.sha }}|g" k8s/deployment.yaml
+
+          # Apply Kubernetes manifests
+          kubectl apply -f k8s/deployment.yaml
+
+          # Wait for rollout to complete
+          kubectl rollout status deployment/iris-api
+
+      - name: Generate deployment report
+        run: |
+          echo "## Deployment Status" > deploy-report.md
+          echo "- **Image**: \`${{ env.GAR_LOCATION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.SERVICE }}/${{ env.SERVICE }}:${{ github.sha }}\`" >> deploy-report.md
+          echo "- **Deployment Time**: $(date)" >> deploy-report.md
+          echo "- **Commit**: ${{ github.sha }}" >> deploy-report.md
+          echo "" >> deploy-report.md
+          echo "### Service Status" >> deploy-report.md
+          kubectl get pods -l app=iris-api >> deploy-report.md
+          echo "" >> deploy-report.md
+          kubectl get service iris-api-service >> deploy-report.md
+
+      - name: Setup CML for deployment report
+        uses: iterative/setup-cml@v1
+
+      - name: Post deployment report
+        env:
+          repo_token: ${{ secrets.GITHUB_TOKEN }}
+        run: cml comment create deploy-report.md
