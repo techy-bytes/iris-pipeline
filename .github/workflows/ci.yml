@@ -110,6 +110,7 @@ jobs:
 
           # Apply Kubernetes manifests
           kubectl apply -f k8s/deployment.yaml
+          kubectl apply -f k8s/hpa.yaml
 
           # Wait for rollout to complete
           kubectl rollout status deployment/iris-api
