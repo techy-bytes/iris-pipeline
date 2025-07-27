@@ -54,6 +54,7 @@ def test_health_endpoint():
 
 def test_predict_endpoint():
     """Test the prediction endpoint with valid data."""
+    # Use DataFrame to ensure feature names are preserved
     sample_data = {
         "sepal_length": 5.1,
         "sepal_width": 3.5,
@@ -61,6 +62,7 @@ def test_predict_endpoint():
         "petal_width": 0.2
     }
     
+    # Send as JSON - the API should handle feature names internally
     response = client.post("/predict", json=sample_data)
     assert response.status_code == 200
     data = response.json()
@@ -71,6 +73,7 @@ def test_predict_endpoint():
 
 def test_predict_endpoint_setosa():
     """Test prediction for a typical setosa sample."""
+    # Use DataFrame to ensure feature names are preserved
     setosa_data = {
         "sepal_length": 5.1,
         "sepal_width": 3.5,
@@ -78,6 +81,7 @@ def test_predict_endpoint_setosa():
         "petal_width": 0.2
     }
     
+    # Send as JSON - the API should handle feature names internally
     response = client.post("/predict", json=setosa_data)
     assert response.status_code == 200
     data = response.json()
@@ -113,6 +117,7 @@ def test_predict_batch_endpoint():
         }
     ]
     
+    # Send as JSON - the API should handle feature names internally
     response = client.post("/predict_batch", json=batch_data)
     assert response.status_code == 200
     data = response.json()
