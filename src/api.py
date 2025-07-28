@@ -1,4 +1,5 @@
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Request
+from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 import joblib
 import numpy as np
@@ -8,6 +9,9 @@ from sklearn.preprocessing import LabelEncoder
 import os
 from typing import List
 from contextlib import asynccontextmanager
+import logging
+import time
+import json
 
 # OpenTelemetry imports
 from opentelemetry import trace
@@ -21,6 +25,19 @@ tracer = trace.get_tracer(__name__)
 # Add console exporter for demonstration (in production, you'd use a proper exporter)
 span_processor = BatchSpanProcessor(ConsoleSpanExporter())
 trace.get_tracer_provider().add_span_processor(span_processor)
+
+# Setup structured logging
+logger = logging.getLogger("iris-ml-service")
+logger.setLevel(logging.INFO)
+handler = logging.StreamHandler()
+
+formatter = logging.Formatter(json.dumps({
+    "severity": "%(levelname)s",
+    "message": "%(message)s",
+    "timestamp": "%(asctime)s"
+}))
+handler.setFormatter(formatter)
+logger.addHandler(handler)
 
 # Global variables for model and label encoder
 model = None
@@ -95,6 +112,22 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(title="Iris Classifier API", version="1.0.0", lifespan=lifespan)
 
+@app.exception_handler(Exception)
+async def exception_handler(request: Request, exc: Exception):
+    span = trace.get_current_span()
+    trace_id = format(span.get_span_context().trace_id, "032x")
+    logger.exception(json.dumps({
+        "event": "unhandled_exception",
+        "trace_id": trace_id,
+        "timestamp": time.time(),
+        "path": str(request.url),
+        "error": str(exc)
+    }))
+    return JSONResponse(
+        status_code=500,
+        content={"detail": "Internal Server Error", "trace_id": trace_id},
+    )
+
 @app.get("/")
 async def root():
     """Health check endpoint."""
@@ -114,32 +147,54 @@ async def health_check():
     }
 
 @app.post("/predict", response_model=PredictionResponse)
-async def predict(features: IrisFeatures):
+async def predict(features: IrisFeatures, request: Request):
     """Predict iris species based on features."""
     if model is None or label_encoder is None:
         raise HTTPException(status_code=503, detail="Model not loaded")
     
-    try:
-        # Prepare features for prediction
-        feature_array = np.array([[
-            features.sepal_length,
-            features.sepal_width,
-            features.petal_length,
-            features.petal_width
-        ]])
+    with tracer.start_as_current_span("model_inference") as span:
+        start_time = time.time()
+        trace_id = format(span.get_span_context().trace_id, "032x")
         
-        # Make prediction
-        prediction = model.predict(feature_array)[0]
-        probabilities = model.predict_proba(feature_array)[0]
+        try:
+            # Prepare features for prediction
+            feature_array = np.array([[
+                features.sepal_length,
+                features.sepal_width,
+                features.petal_length,
+                features.petal_width
+            ]])
+            
+            # Make prediction
+            prediction = model.predict(feature_array)[0]
+            probabilities = model.predict_proba(feature_array)[0]
+            
+            # Decode prediction
+            species = label_encoder.inverse_transform([prediction])[0]
+            confidence = float(max(probabilities))
+            
+            latency = round((time.time() - start_time) * 1000, 2)
+            
+            logger.info(json.dumps({
+                "event": "prediction",
+                "trace_id": trace_id,
+                "timestamp": time.time(),
+                "input": features.model_dump(),
+                "result": {"species": species, "confidence": confidence},
+                "latency_ms": latency,
+                "status": "success"
+            }))
+            
+            return PredictionResponse(species=species, confidence=confidence)
         
-        # Decode prediction
-        species = label_encoder.inverse_transform([prediction])[0]
-        confidence = float(max(probabilities))
-        
-        return PredictionResponse(species=species, confidence=confidence)
-    
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Prediction failed: {str(e)}")
+        except Exception as e:
+            logger.exception(json.dumps({
+                "event": "prediction_error",
+                "trace_id": trace_id,
+                "timestamp": time.time(),
+                "error": str(e)
+            }))
+            raise HTTPException(status_code=500, detail=f"Prediction failed: {str(e)}")
 
 @app.post("/predict_batch")
 async def predict_batch(features_list: List[IrisFeatures]):
@@ -165,6 +220,9 @@ async def predict_batch(features_list: List[IrisFeatures]):
         
         # Make predictions with OpenTelemetry instrumentation
         with tracer.start_as_current_span("model_prediction_batch") as span:
+            start_time = time.time()
+            trace_id = format(span.get_span_context().trace_id, "032x")
+            
             # Add span attributes for observability
             span.set_attribute("batch_size", len(features_list))
             span.set_attribute("model_type", "RandomForestClassifier")
@@ -172,6 +230,8 @@ async def predict_batch(features_list: List[IrisFeatures]):
             
             predictions = model.predict(feature_matrix)
             probabilities = model.predict_proba(feature_matrix)
+            
+            latency = round((time.time() - start_time) * 1000, 2)
         
         # Decode predictions
         results = []
@@ -180,9 +240,26 @@ async def predict_batch(features_list: List[IrisFeatures]):
             confidence = float(max(probabilities[i]))
             results.append(PredictionResponse(species=species, confidence=confidence))
         
+        logger.info(json.dumps({
+            "event": "batch_prediction",
+            "trace_id": trace_id,
+            "timestamp": time.time(),
+            "batch_size": len(features_list),
+            "latency_ms": latency,
+            "status": "success"
+        }))
+        
         return results
     
     except Exception as e:
+        span = trace.get_current_span()
+        trace_id = format(span.get_span_context().trace_id, "032x")
+        logger.exception(json.dumps({
+            "event": "batch_prediction_error",
+            "trace_id": trace_id,
+            "timestamp": time.time(),
+            "error": str(e)
+        }))
         raise HTTPException(status_code=500, detail=f"Batch prediction failed: {str(e)}")
 
 if __name__ == "__main__":
