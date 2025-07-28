@@ -31,7 +31,7 @@ import sys
 
 logger = logging.getLogger("iris-ml-service")
 logger.setLevel(logging.INFO)
-handler = logging.StreamHandler()
+handler = logging.StreamHandler(sys.stdout)
 
 formatter = logging.Formatter(json.dumps({
     "severity": "%(levelname)s",
