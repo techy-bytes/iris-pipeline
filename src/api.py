@@ -16,8 +16,47 @@ import json
 # OpenTelemetry imports
 from opentelemetry import trace
 from opentelemetry.sdk.trace import TracerProvider
-from opentelemetry.sdk.trace.export import ConsoleSpanExporter, BatchSpanProcessor
+from opentelemetry.sdk.trace.export import ConsoleSpanExporter, BatchSpanProcessor, SpanExporter, SpanExportResult
 from opentelemetry.sdk.resources import Resource
+from opentelemetry.sdk.trace import ReadableSpan
+from typing import Sequence
+
+# Custom ConsoleSpanExporter that handles closed streams gracefully
+class SafeConsoleSpanExporter(SpanExporter):
+    """Console span exporter that gracefully handles closed output streams."""
+    
+    def __init__(self, out=None, formatter=None):
+        self._console_exporter = ConsoleSpanExporter(out=out, formatter=formatter)
+    
+    def export(self, spans: Sequence[ReadableSpan]) -> SpanExportResult:
+        """Export spans, handling closed file errors gracefully."""
+        try:
+            return self._console_exporter.export(spans)
+        except ValueError as e:
+            if "I/O operation on closed file" in str(e):
+                # Stream is closed (likely during test cleanup), silently ignore
+                return SpanExportResult.SUCCESS
+            else:
+                # Re-raise other ValueError instances
+                raise
+        except Exception:
+            # Handle any other unexpected exceptions
+            return SpanExportResult.FAILURE
+    
+    def shutdown(self) -> None:
+        """Shutdown the exporter."""
+        try:
+            self._console_exporter.shutdown()
+        except (ValueError, AttributeError):
+            # Ignore errors during shutdown
+            pass
+    
+    def force_flush(self, timeout_millis: int = 30000) -> bool:
+        """Force flush pending spans."""
+        try:
+            return self._console_exporter.force_flush(timeout_millis)
+        except (ValueError, AttributeError):
+            return True
 
 # Initialize OpenTelemetry with proper service identification
 resource = Resource.create({"service.name": "iris-ml-service", "service.version": "1.0.0"})
@@ -77,22 +116,22 @@ def setup_telemetry():
     if load_test_mode:
         # Minimal console output during load testing
         span_processor = BatchSpanProcessor(
-            ConsoleSpanExporter(),
+            SafeConsoleSpanExporter(),
             max_queue_size=512,  # Smaller queue for load testing
             max_export_batch_size=64,  # Smaller batches to reduce console spam
             export_timeout_millis=10000,
             schedule_delay_millis=10000,  # Export every 10 seconds during load testing
         )
-        print("Using console exporter for traces with LOAD TEST settings (minimal output)")
+        print("Using safe console exporter for traces with LOAD TEST settings (minimal output)")
     else:
         span_processor = BatchSpanProcessor(
-            ConsoleSpanExporter(),
+            SafeConsoleSpanExporter(),
             max_queue_size=1024,  # Standard queue for console
             max_export_batch_size=128,
             export_timeout_millis=5000,
             schedule_delay_millis=2000,  # Less frequent console exports
         )
-        print("Using console exporter for traces with standard settings")
+        print("Using safe console exporter for traces with standard settings")
     return span_processor
 
 # Setup trace exporter
