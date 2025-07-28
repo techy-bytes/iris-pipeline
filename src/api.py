@@ -17,41 +17,82 @@ import json
 from opentelemetry import trace
 from opentelemetry.sdk.trace import TracerProvider
 from opentelemetry.sdk.trace.export import ConsoleSpanExporter, BatchSpanProcessor
+from opentelemetry.sdk.resources import Resource
 
-# Initialize OpenTelemetry
-trace.set_tracer_provider(TracerProvider())
+# Initialize OpenTelemetry with proper service identification
+resource = Resource.create({"service.name": "iris-ml-service", "service.version": "1.0.0"})
+trace.set_tracer_provider(TracerProvider(resource=resource))
 tracer = trace.get_tracer(__name__)
 
 # Initialize telemetry exporters based on environment
 def setup_telemetry():
     """Setup telemetry exporters with fallback to console."""
+    # Check if we should be more aggressive for load testing
+    load_test_mode = os.getenv('LOAD_TEST_MODE', 'false').lower() == 'true'
+    
     try:
-        # Check if we have GCP credentials and project configured
-        if os.getenv('GOOGLE_CLOUD_PROJECT') or os.getenv('GCP_PROJECT'):
+        # Enhanced GCP environment detection
+        gcp_project = os.getenv('GOOGLE_CLOUD_PROJECT') or os.getenv('GCP_PROJECT')
+        
+        # Also check for GCP metadata server availability
+        if not gcp_project:
+            try:
+                import google.auth
+                from google.auth import environment_detection
+                if environment_detection.on_google_cloud():
+                    _, gcp_project = google.auth.default()
+                    if hasattr(gcp_project, 'project_id'):
+                        gcp_project = gcp_project.project_id
+            except Exception:
+                pass
+        
+        if gcp_project:
             from opentelemetry.exporter.cloud_trace import CloudTraceSpanExporter
-            gcp_exporter = CloudTraceSpanExporter()
-            # Optimize batch processor for better performance under load
-            span_processor = BatchSpanProcessor(
-                gcp_exporter,
-                max_queue_size=2048,  # Increased queue size for high load
-                max_export_batch_size=512,  # Larger batch sizes
-                export_timeout_millis=30000,  # 30 second timeout
-                schedule_delay_millis=1000,  # Export every 1 second
-            )
-            print("Using Google Cloud Trace exporter with optimized settings")
+            gcp_exporter = CloudTraceSpanExporter(project_id=gcp_project)
+            
+            # More aggressive optimization for load testing
+            if load_test_mode:
+                span_processor = BatchSpanProcessor(
+                    gcp_exporter,
+                    max_queue_size=4096,  # Even larger queue for load testing
+                    max_export_batch_size=1024,  # Larger batches
+                    export_timeout_millis=60000,  # Longer timeout
+                    schedule_delay_millis=5000,  # Less frequent exports (every 5 seconds)
+                )
+                print("Using Google Cloud Trace exporter with LOAD TEST optimizations")
+            else:
+                span_processor = BatchSpanProcessor(
+                    gcp_exporter,
+                    max_queue_size=2048,  # Standard queue size
+                    max_export_batch_size=512,  # Standard batch sizes
+                    export_timeout_millis=30000,  # 30 second timeout
+                    schedule_delay_millis=1000,  # Export every 1 second
+                )
+                print("Using Google Cloud Trace exporter with standard settings")
             return span_processor
     except Exception as e:
         print(f"Failed to initialize Google Cloud Trace exporter: {e}")
     
-    # Fallback to console exporter for local development with optimized settings
-    span_processor = BatchSpanProcessor(
-        ConsoleSpanExporter(),
-        max_queue_size=1024,  # Smaller queue for console to avoid overwhelming logs
-        max_export_batch_size=128,
-        export_timeout_millis=5000,
-        schedule_delay_millis=2000,  # Less frequent console exports
-    )
-    print("Using console exporter for traces with optimized settings")
+    # Fallback to console exporter with load-test awareness
+    if load_test_mode:
+        # Minimal console output during load testing
+        span_processor = BatchSpanProcessor(
+            ConsoleSpanExporter(),
+            max_queue_size=512,  # Smaller queue for load testing
+            max_export_batch_size=64,  # Smaller batches to reduce console spam
+            export_timeout_millis=10000,
+            schedule_delay_millis=10000,  # Export every 10 seconds during load testing
+        )
+        print("Using console exporter for traces with LOAD TEST settings (minimal output)")
+    else:
+        span_processor = BatchSpanProcessor(
+            ConsoleSpanExporter(),
+            max_queue_size=1024,  # Standard queue for console
+            max_export_batch_size=128,
+            export_timeout_millis=5000,
+            schedule_delay_millis=2000,  # Less frequent console exports
+        )
+        print("Using console exporter for traces with standard settings")
     return span_processor
 
 # Setup trace exporter
@@ -67,19 +108,37 @@ def setup_logging():
     
     # Initialize Google Cloud Logging if available
     try:
-        # Check if we're running in GCP environment with proper credentials
-        if os.getenv('GOOGLE_CLOUD_PROJECT') or os.getenv('GCP_PROJECT'):
+        # Enhanced GCP environment detection
+        gcp_project = os.getenv('GOOGLE_CLOUD_PROJECT') or os.getenv('GCP_PROJECT')
+        
+        # Also check for GCP metadata server availability
+        if not gcp_project:
+            try:
+                import google.auth
+                from google.auth import environment_detection
+                if environment_detection.on_google_cloud():
+                    _, gcp_project = google.auth.default()
+                    if hasattr(gcp_project, 'project_id'):
+                        gcp_project = gcp_project.project_id
+            except Exception:
+                pass
+        
+        if gcp_project:
             from google.cloud import logging as gcp_logging
             
             # Initialize Google Cloud Logging client
-            gcp_client = gcp_logging.Client()
+            gcp_client = gcp_logging.Client(project=gcp_project)
             gcp_client.setup_logging()
-            print("Google Cloud Logging initialized")
+            print(f"Google Cloud Logging initialized for project: {gcp_project}")
             
             # Use Cloud Logging structured format
             logger = logging.getLogger("iris-ml-service")
-            # Reduce logging level during load tests to improve performance
-            logger.setLevel(logging.WARNING if load_test_mode else logging.INFO)
+            # More aggressive logging reduction during load tests
+            if load_test_mode:
+                logger.setLevel(logging.ERROR)  # Only errors during load testing
+                print("Cloud Logging set to ERROR level for load testing")
+            else:
+                logger.setLevel(logging.INFO)
             return logger
         else:
             raise ImportError("GCP project not configured")
@@ -88,14 +147,19 @@ def setup_logging():
         print(f"Using local logging setup: {e}")
         # Fallback to local structured logging
         logger = logging.getLogger("iris-ml-service")
-        # Reduce logging level during load tests to improve performance
-        logger.setLevel(logging.WARNING if load_test_mode else logging.INFO)
+        # More aggressive logging reduction during load tests  
+        if load_test_mode:
+            logger.setLevel(logging.ERROR)  # Only errors during load testing
+            print("Local logging set to ERROR level for load testing")
+        else:
+            logger.setLevel(logging.INFO)
         handler = logging.StreamHandler(sys.stdout)
         
         formatter = logging.Formatter(json.dumps({
             "severity": "%(levelname)s",
             "message": "%(message)s",
-            "timestamp": "%(asctime)s"
+            "timestamp": "%(asctime)s",
+            "service": "iris-ml-service"
         }))
         handler.setFormatter(formatter)
         logger.addHandler(handler)
@@ -213,15 +277,37 @@ async def root():
 
 @app.get("/health")
 async def health_check():
-    """Detailed health check."""
+    """Detailed health check with telemetry status."""
     if model is None or label_encoder is None:
         raise HTTPException(status_code=503, detail="Model not loaded")
+    
+    # Check telemetry status
+    telemetry_status = "active"
+    try:
+        span = trace.get_current_span()
+        if span.get_span_context().trace_id == 0:
+            telemetry_status = "inactive"
+    except Exception:
+        telemetry_status = "error"
+    
+    # Check logging configuration
+    load_test_mode = os.getenv('LOAD_TEST_MODE', 'false').lower() == 'true'
+    gcp_project = os.getenv('GOOGLE_CLOUD_PROJECT') or os.getenv('GCP_PROJECT')
     
     return {
         "status": "healthy",
         "model_loaded": True,
         "feature_names": feature_names,
-        "classes": label_encoder.classes_.tolist()
+        "classes": label_encoder.classes_.tolist(),
+        "telemetry": {
+            "status": telemetry_status,
+            "gcp_project": gcp_project or "local",
+            "load_test_mode": load_test_mode
+        },
+        "logging": {
+            "level": logger.level,
+            "gcp_enabled": gcp_project is not None
+        }
     }
 
 @app.post("/predict", response_model=PredictionResponse)
@@ -261,7 +347,7 @@ async def predict(features: IrisFeatures, request: Request):
             span.set_attribute("confidence", confidence)
             span.set_attribute("latency_ms", latency)
             
-            # Log only warnings and errors during load testing, full info otherwise
+            # Log only errors during load testing, full info otherwise
             if not load_test_mode:
                 logger.info(json.dumps({
                     "event": "prediction",
@@ -332,7 +418,7 @@ async def predict_batch(features_list: List[IrisFeatures]):
             confidence = float(max(probabilities[i]))
             results.append(PredictionResponse(species=species, confidence=confidence))
         
-        # Log only warnings and errors during load testing, full info otherwise
+        # Log only errors during load testing, full info otherwise
         if not load_test_mode:
             logger.info(json.dumps({
                 "event": "batch_prediction",

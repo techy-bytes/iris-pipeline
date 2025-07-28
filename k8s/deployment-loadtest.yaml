@@ -1,18 +1,18 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: iris-api
+  name: iris-api-loadtest
   labels:
-    app: iris-api
+    app: iris-api-loadtest
 spec:
-  replicas: 2
+  replicas: 3  # More replicas for load testing
   selector:
     matchLabels:
-      app: iris-api
+      app: iris-api-loadtest
   template:
     metadata:
       labels:
-        app: iris-api
+        app: iris-api-loadtest
     spec:
       serviceAccountName: telemetry-access
       containers:
@@ -29,16 +29,16 @@ spec:
           value: "${PROJECT_ID}"
         - name: GCP_PROJECT
           value: "${PROJECT_ID}"
-        # Load testing optimization - uncomment for load testing
-        # - name: LOAD_TEST_MODE
-        #   value: "true"
+        # Load testing optimization enabled
+        - name: LOAD_TEST_MODE
+          value: "true"
         resources:
           requests:
-            memory: "256Mi"
-            cpu: "250m"
+            memory: "512Mi"   # More memory for load testing
+            cpu: "500m"       # More CPU for load testing
           limits:
-            memory: "512Mi"
-            cpu: "500m"
+            memory: "1Gi"
+            cpu: "1000m"
         livenessProbe:
           httpGet:
             path: /health
@@ -55,9 +55,9 @@ spec:
 apiVersion: v1
 kind: Service
 metadata:
-  name: iris-api-service
+  name: iris-api-loadtest-service
   labels:
-    app: iris-api
+    app: iris-api-loadtest
 spec:
   type: LoadBalancer
   ports:
@@ -65,4 +65,4 @@ spec:
     targetPort: 8000
     protocol: TCP
   selector:
-    app: iris-api
+    app: iris-api-loadtest

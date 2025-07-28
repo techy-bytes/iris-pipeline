@@ -66,24 +66,63 @@ Set `LOAD_TEST_MODE=true` to optimize the API for load testing:
 export LOAD_TEST_MODE=true
 
 # This will:
-# - Reduce logging verbosity (WARNING level only)
-# - Optimize telemetry batch processing
+# - Reduce logging verbosity to ERROR level only (more aggressive than before)
+# - Optimize telemetry batch processing with larger queues and less frequent exports
 # - Skip detailed prediction logging during high load
+# - Reduce console telemetry output frequency for local development
+```
+
+### GCP Integration Optimizations
+
+When running in GCP with `LOAD_TEST_MODE=true`:
+
+- **Logging**: Only ERROR level messages sent to Cloud Logging
+- **Telemetry**: Optimized batch processing (4096 queue, 1024 batch size, 5s export interval)
+- **Service Identification**: Proper service name "iris-ml-service" for better filtering
+
+### Kubernetes Load Test Deployment
+
+Use the dedicated load testing configuration:
+
+```bash
+# Deploy optimized configuration for load testing
+envsubst < k8s/deployment-loadtest.yaml | kubectl apply -f -
+
+# This deployment includes:
+# - LOAD_TEST_MODE=true by default
+# - More replicas (3 instead of 2)
+# - Higher resource limits (1Gi memory, 1000m CPU)
+# - Optimized for high throughput
 ```
 
 ### Telemetry Settings
 
-The API includes optimized telemetry settings for high load:
+The API includes optimized telemetry settings for different environments:
 
-- **Google Cloud Trace**: 
+#### Google Cloud Trace (GCP Environment):
+- **Standard Mode**: 
   - Queue size: 2048 spans
-  - Batch size: 512 spans
+  - Batch size: 512 spans  
   - Export interval: 1 second
+- **Load Test Mode**: 
+  - Queue size: 4096 spans
+  - Batch size: 1024 spans
+  - Export interval: 5 seconds (less frequent for better performance)
 
-- **Console Trace** (local):
-  - Queue size: 1024 spans  
+#### Console Trace (Local Development):
+- **Standard Mode**:
+  - Queue size: 1024 spans
   - Batch size: 128 spans
   - Export interval: 2 seconds
+- **Load Test Mode**:
+  - Queue size: 512 spans
+  - Batch size: 64 spans  
+  - Export interval: 10 seconds (minimal console output)
+
+#### Service Identification:
+- Service name: "iris-ml-service"
+- Service version: "1.0.0"
+- Enhanced GCP environment detection via metadata server
 
 ## Sample Load Test Scenarios
 
