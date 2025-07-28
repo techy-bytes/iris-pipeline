@@ -30,15 +30,28 @@ def setup_telemetry():
         if os.getenv('GOOGLE_CLOUD_PROJECT') or os.getenv('GCP_PROJECT'):
             from opentelemetry.exporter.cloud_trace import CloudTraceSpanExporter
             gcp_exporter = CloudTraceSpanExporter()
-            span_processor = BatchSpanProcessor(gcp_exporter)
-            print("Using Google Cloud Trace exporter")
+            # Optimize batch processor for better performance under load
+            span_processor = BatchSpanProcessor(
+                gcp_exporter,
+                max_queue_size=2048,  # Increased queue size for high load
+                max_export_batch_size=512,  # Larger batch sizes
+                export_timeout_millis=30000,  # 30 second timeout
+                schedule_delay_millis=1000,  # Export every 1 second
+            )
+            print("Using Google Cloud Trace exporter with optimized settings")
             return span_processor
     except Exception as e:
         print(f"Failed to initialize Google Cloud Trace exporter: {e}")
     
-    # Fallback to console exporter for local development
-    span_processor = BatchSpanProcessor(ConsoleSpanExporter())
-    print("Using console exporter for traces")
+    # Fallback to console exporter for local development with optimized settings
+    span_processor = BatchSpanProcessor(
+        ConsoleSpanExporter(),
+        max_queue_size=1024,  # Smaller queue for console to avoid overwhelming logs
+        max_export_batch_size=128,
+        export_timeout_millis=5000,
+        schedule_delay_millis=2000,  # Less frequent console exports
+    )
+    print("Using console exporter for traces with optimized settings")
     return span_processor
 
 # Setup trace exporter
@@ -49,6 +62,9 @@ import sys
 
 def setup_logging():
     """Setup logging with Google Cloud Logging if available."""
+    # Check if we should reduce logging for load testing
+    load_test_mode = os.getenv('LOAD_TEST_MODE', 'false').lower() == 'true'
+    
     # Initialize Google Cloud Logging if available
     try:
         # Check if we're running in GCP environment with proper credentials
@@ -62,7 +78,8 @@ def setup_logging():
             
             # Use Cloud Logging structured format
             logger = logging.getLogger("iris-ml-service")
-            logger.setLevel(logging.INFO)
+            # Reduce logging level during load tests to improve performance
+            logger.setLevel(logging.WARNING if load_test_mode else logging.INFO)
             return logger
         else:
             raise ImportError("GCP project not configured")
@@ -71,7 +88,8 @@ def setup_logging():
         print(f"Using local logging setup: {e}")
         # Fallback to local structured logging
         logger = logging.getLogger("iris-ml-service")
-        logger.setLevel(logging.INFO)
+        # Reduce logging level during load tests to improve performance
+        logger.setLevel(logging.WARNING if load_test_mode else logging.INFO)
         handler = logging.StreamHandler(sys.stdout)
         
         formatter = logging.Formatter(json.dumps({
@@ -216,6 +234,9 @@ async def predict(features: IrisFeatures, request: Request):
         start_time = time.time()
         trace_id = format(span.get_span_context().trace_id, "032x")
         
+        # Check if we're in load test mode to reduce logging
+        load_test_mode = os.getenv('LOAD_TEST_MODE', 'false').lower() == 'true'
+        
         try:
             # Prepare features for prediction using DataFrame with feature names
             feature_data = pd.DataFrame({
@@ -235,15 +256,22 @@ async def predict(features: IrisFeatures, request: Request):
             
             latency = round((time.time() - start_time) * 1000, 2)
             
-            logger.info(json.dumps({
-                "event": "prediction",
-                "trace_id": trace_id,
-                "timestamp": time.time(),
-                "input": features.model_dump(),
-                "result": {"species": species, "confidence": confidence},
-                "latency_ms": latency,
-                "status": "success"
-            }))
+            # Add span attributes for observability
+            span.set_attribute("species", species)
+            span.set_attribute("confidence", confidence)
+            span.set_attribute("latency_ms", latency)
+            
+            # Log only warnings and errors during load testing, full info otherwise
+            if not load_test_mode:
+                logger.info(json.dumps({
+                    "event": "prediction",
+                    "trace_id": trace_id,
+                    "timestamp": time.time(),
+                    "input": features.model_dump(),
+                    "result": {"species": species, "confidence": confidence},
+                    "latency_ms": latency,
+                    "status": "success"
+                }))
             
             return PredictionResponse(species=species, confidence=confidence)
         
@@ -264,6 +292,9 @@ async def predict_batch(features_list: List[IrisFeatures]):
     
     if not features_list:
         return []
+    
+    # Check if we're in load test mode to reduce logging
+    load_test_mode = os.getenv('LOAD_TEST_MODE', 'false').lower() == 'true'
     
     try:
         # Prepare features for prediction using DataFrame with feature names
@@ -292,6 +323,7 @@ async def predict_batch(features_list: List[IrisFeatures]):
             probabilities = model.predict_proba(feature_df)
             
             latency = round((time.time() - start_time) * 1000, 2)
+            span.set_attribute("latency_ms", latency)
         
         # Decode predictions
         results = []
@@ -300,14 +332,16 @@ async def predict_batch(features_list: List[IrisFeatures]):
             confidence = float(max(probabilities[i]))
             results.append(PredictionResponse(species=species, confidence=confidence))
         
-        logger.info(json.dumps({
-            "event": "batch_prediction",
-            "trace_id": trace_id,
-            "timestamp": time.time(),
-            "batch_size": len(features_list),
-            "latency_ms": latency,
-            "status": "success"
-        }))
+        # Log only warnings and errors during load testing, full info otherwise
+        if not load_test_mode:
+            logger.info(json.dumps({
+                "event": "batch_prediction",
+                "trace_id": trace_id,
+                "timestamp": time.time(),
+                "batch_size": len(features_list),
+                "latency_ms": latency,
+                "status": "success"
+            }))
         
         return results
     

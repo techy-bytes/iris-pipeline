@@ -29,6 +29,9 @@ spec:
           value: "${PROJECT_ID}"
         - name: GCP_PROJECT
           value: "${PROJECT_ID}"
+        # Uncomment for load testing to optimize performance
+        # - name: LOAD_TEST_MODE
+        #   value: "true"
         resources:
           requests:
             memory: "256Mi"

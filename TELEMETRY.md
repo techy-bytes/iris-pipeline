@@ -79,6 +79,42 @@ wrk -t4 -c100 -d30s --latency -s k8s/post.lua http://EXTERNAL_IP:80/predict
 ### Environment Variables
 - `GOOGLE_CLOUD_PROJECT` / `GCP_PROJECT`: Enables GCP telemetry features
 - `PYTHONUNBUFFERED=1`: Ensures immediate log output
+- `LOAD_TEST_MODE=true`: Optimizes telemetry for high-load scenarios
+
+## Load Testing Support
+
+The service includes optimized telemetry settings for load testing scenarios:
+
+### Load Test Mode
+Set `LOAD_TEST_MODE=true` to enable optimizations:
+- Reduces logging verbosity (WARNING level only)
+- Optimizes telemetry batch processing settings
+- Disables detailed prediction logging during high load
+- Maintains error logging and tracing for debugging
+
+### Telemetry Performance Settings
+- **Google Cloud Trace**: 2048 span queue, 512 batch size, 1s export interval
+- **Console Trace**: 1024 span queue, 128 batch size, 2s export interval
+- **Load Test Logging**: WARNING level to reduce I/O overhead
+
+### Locust Integration
+Use the included `locustfile.py` for comprehensive load testing:
+
+```bash
+# Install Locust
+pip install locust
+
+# Run load test locally
+locust -f locustfile.py --host=http://localhost:8000
+
+# Run against Kubernetes deployment
+locust -f locustfile.py --host=http://<EXTERNAL-IP>
+
+# Headless load test
+locust -f locustfile.py --host=http://localhost:8000 --users=50 --spawn-rate=5 --run-time=300s --headless
+```
+
+See `LOAD_TESTING.md` for detailed load testing documentation.
 
 ## Monitoring & Observability
 
