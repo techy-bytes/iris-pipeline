@@ -22,24 +22,68 @@ from opentelemetry.sdk.trace.export import ConsoleSpanExporter, BatchSpanProcess
 trace.set_tracer_provider(TracerProvider())
 tracer = trace.get_tracer(__name__)
 
-# Add console exporter for demonstration (in production, you'd use a proper exporter)
-span_processor = BatchSpanProcessor(ConsoleSpanExporter())
-trace.get_tracer_provider().add_span_processor(span_processor)
+# Initialize telemetry exporters based on environment
+def setup_telemetry():
+    """Setup telemetry exporters with fallback to console."""
+    try:
+        # Check if we have GCP credentials and project configured
+        if os.getenv('GOOGLE_CLOUD_PROJECT') or os.getenv('GCP_PROJECT'):
+            from opentelemetry.exporter.cloud_trace import CloudTraceSpanExporter
+            gcp_exporter = CloudTraceSpanExporter()
+            span_processor = BatchSpanProcessor(gcp_exporter)
+            print("Using Google Cloud Trace exporter")
+            return span_processor
+    except Exception as e:
+        print(f"Failed to initialize Google Cloud Trace exporter: {e}")
+    
+    # Fallback to console exporter for local development
+    span_processor = BatchSpanProcessor(ConsoleSpanExporter())
+    print("Using console exporter for traces")
+    return span_processor
+
+# Setup trace exporter
+trace.get_tracer_provider().add_span_processor(setup_telemetry())
 
 # Setup structured logging
 import sys
 
-logger = logging.getLogger("iris-ml-service")
-logger.setLevel(logging.INFO)
-handler = logging.StreamHandler(sys.stdout)
+def setup_logging():
+    """Setup logging with Google Cloud Logging if available."""
+    # Initialize Google Cloud Logging if available
+    try:
+        # Check if we're running in GCP environment with proper credentials
+        if os.getenv('GOOGLE_CLOUD_PROJECT') or os.getenv('GCP_PROJECT'):
+            from google.cloud import logging as gcp_logging
+            
+            # Initialize Google Cloud Logging client
+            gcp_client = gcp_logging.Client()
+            gcp_client.setup_logging()
+            print("Google Cloud Logging initialized")
+            
+            # Use Cloud Logging structured format
+            logger = logging.getLogger("iris-ml-service")
+            logger.setLevel(logging.INFO)
+            return logger
+        else:
+            raise ImportError("GCP project not configured")
+            
+    except Exception as e:
+        print(f"Using local logging setup: {e}")
+        # Fallback to local structured logging
+        logger = logging.getLogger("iris-ml-service")
+        logger.setLevel(logging.INFO)
+        handler = logging.StreamHandler(sys.stdout)
+        
+        formatter = logging.Formatter(json.dumps({
+            "severity": "%(levelname)s",
+            "message": "%(message)s",
+            "timestamp": "%(asctime)s"
+        }))
+        handler.setFormatter(formatter)
+        logger.addHandler(handler)
+        return logger
 
-formatter = logging.Formatter(json.dumps({
-    "severity": "%(levelname)s",
-    "message": "%(message)s",
-    "timestamp": "%(asctime)s"
-}))
-handler.setFormatter(formatter)
-logger.addHandler(handler)
+logger = setup_logging()
 
 # Configure uvicorn and root logging to use stdout instead of stderr
 # This ensures that all logs go to stdout, preventing Kubernetes from treating them as ERROR
