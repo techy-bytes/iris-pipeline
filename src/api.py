@@ -27,6 +27,8 @@ span_processor = BatchSpanProcessor(ConsoleSpanExporter())
 trace.get_tracer_provider().add_span_processor(span_processor)
 
 # Setup structured logging
+import sys
+
 logger = logging.getLogger("iris-ml-service")
 logger.setLevel(logging.INFO)
 handler = logging.StreamHandler()
@@ -38,6 +40,20 @@ formatter = logging.Formatter(json.dumps({
 }))
 handler.setFormatter(formatter)
 logger.addHandler(handler)
+
+# Configure uvicorn and root logging to use stdout instead of stderr
+# This ensures that all logs go to stdout, preventing Kubernetes from treating them as ERROR
+root_logger = logging.getLogger()
+for handler in root_logger.handlers[:]:
+    root_logger.removeHandler(handler)
+
+# Add a stdout handler to root logger
+stdout_handler = logging.StreamHandler(sys.stdout)
+stdout_handler.setLevel(logging.INFO)
+simple_formatter = logging.Formatter('%(levelname)s:     %(message)s')
+stdout_handler.setFormatter(simple_formatter)
+root_logger.addHandler(stdout_handler)
+root_logger.setLevel(logging.INFO)
 
 # Global variables for model and label encoder
 model = None
@@ -157,17 +173,17 @@ async def predict(features: IrisFeatures, request: Request):
         trace_id = format(span.get_span_context().trace_id, "032x")
         
         try:
-            # Prepare features for prediction
-            feature_array = np.array([[
-                features.sepal_length,
-                features.sepal_width,
-                features.petal_length,
-                features.petal_width
-            ]])
+            # Prepare features for prediction using DataFrame with feature names
+            feature_data = pd.DataFrame({
+                'sepal_length': [features.sepal_length],
+                'sepal_width': [features.sepal_width],
+                'petal_length': [features.petal_length],
+                'petal_width': [features.petal_width]
+            })
             
             # Make prediction
-            prediction = model.predict(feature_array)[0]
-            probabilities = model.predict_proba(feature_array)[0]
+            prediction = model.predict(feature_data)[0]
+            probabilities = model.predict_proba(feature_data)[0]
             
             # Decode prediction
             species = label_encoder.inverse_transform([prediction])[0]
@@ -206,17 +222,17 @@ async def predict_batch(features_list: List[IrisFeatures]):
         return []
     
     try:
-        # Prepare features for prediction
-        feature_arrays = []
+        # Prepare features for prediction using DataFrame with feature names
+        feature_data = []
         for features in features_list:
-            feature_arrays.append([
-                features.sepal_length,
-                features.sepal_width,
-                features.petal_length,
-                features.petal_width
-            ])
+            feature_data.append({
+                'sepal_length': features.sepal_length,
+                'sepal_width': features.sepal_width,
+                'petal_length': features.petal_length,
+                'petal_width': features.petal_width
+            })
         
-        feature_matrix = np.array(feature_arrays)
+        feature_df = pd.DataFrame(feature_data)
         
         # Make predictions with OpenTelemetry instrumentation
         with tracer.start_as_current_span("model_prediction_batch") as span:
@@ -226,10 +242,10 @@ async def predict_batch(features_list: List[IrisFeatures]):
             # Add span attributes for observability
             span.set_attribute("batch_size", len(features_list))
             span.set_attribute("model_type", "RandomForestClassifier")
-            span.set_attribute("feature_count", feature_matrix.shape[1])
+            span.set_attribute("feature_count", feature_df.shape[1])
             
-            predictions = model.predict(feature_matrix)
-            probabilities = model.predict_proba(feature_matrix)
+            predictions = model.predict(feature_df)
+            probabilities = model.predict_proba(feature_df)
             
             latency = round((time.time() - start_time) * 1000, 2)
         
@@ -264,4 +280,10 @@ async def predict_batch(features_list: List[IrisFeatures]):
 
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=8000)
+    uvicorn.run(
+        app, 
+        host="0.0.0.0", 
+        port=8000,
+        log_level="info",
+        access_log=True
+    )
