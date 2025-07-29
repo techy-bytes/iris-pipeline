@@ -64,6 +64,11 @@ models/
 metrics.csv
 *.log
 
+# Customer vector output files
+customer_vectors_debug.csv
+test_vectors.csv
+*_vectors.csv
+
 # IDE
 .vscode/
 .idea/

@@ -1,0 +1,20 @@
+database:
+  authentication: 'ActiveDirectoryPassword'
+  database: 'TWC_Dedicated_SQL_Pool_1'
+  driver: '{ODBC Driver 18 for SQL Server}'
+  password: 'sjl@twc#1'
+  server: 'synapse-twc.sql.azuresynapse.net'
+  username: 'jacob.lazar@thirdwavecoffee.in'
+
+queries:
+  use_simplified_queries: true
+  max_customers_per_batch: 1000
+  query_timeout: 300
+  enable_csv_output: true
+  csv_output_path: "customer_vectors_debug.csv"
+
+logging:
+  level: "INFO"
+  format: "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+  enable_file_logging: false
+  log_file: "customer_vector.log"
