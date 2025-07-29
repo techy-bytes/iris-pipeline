@@ -9,5 +9,8 @@ opentelemetry-api
 opentelemetry-sdk
 opentelemetry-exporter-gcp-trace
 google-cloud-logging
+# Customer vector dependencies
+pyodbc
+pyyaml
 # Load testing (optional)
 # locust
