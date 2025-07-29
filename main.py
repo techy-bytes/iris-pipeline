@@ -15,8 +15,10 @@ logging.basicConfig(
 def main():
     """Main function that matches user's example."""
     try:
+        print("Starting Customer Vector Generation Test...")
+        print("Generating vectors for top 3 customers...")
+        
         # Generate vectors for top 3 customers (uses config.yaml settings)
-        print("Starting customer vector generation for top 3 customers...")
         vectors = n8n_generate_customer_vectors(top_n=3)
 
         # Generate vectors for specific customers (alternative approach)
@@ -31,6 +33,8 @@ def main():
             
     except Exception as e:
         print(f"Error: {e}")
+        import traceback
+        traceback.print_exc()
         raise
 
 if __name__ == "__main__":

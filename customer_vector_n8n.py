@@ -28,8 +28,15 @@ class CustomerVectorGenerator:
     def connect(self):
         """Establish database connection."""
         try:
+            logger.info("Establishing database connection...")
             connection_string = self.config.get_db_connection_string()
+            
+            # Add connection timeout
+            if "Connection Timeout=" not in connection_string:
+                connection_string += ";Connection Timeout=30"
+            
             self.conn = pyodbc.connect(connection_string)
+            self.conn.timeout = 30  # Set query timeout
             logger.info("Database connection established")
             return True
         except Exception as e:
@@ -49,27 +56,38 @@ class CustomerVectorGenerator:
             # Specific customers requested
             customer_list = ','.join(map(str, customer_ids))
             query = f"""
-            SELECT userId 
-            FROM [dbo].[customers] 
-            WHERE userId IN ({customer_list})
-            ORDER BY userId
+            SELECT id as userId 
+            FROM users 
+            WHERE id IN ({customer_list})
+            ORDER BY id
             """
             logger.info(f"Loading {len(customer_ids)} specific customers")
         elif top_n:
-            # Top N customers requested
+            # Top N customers requested - simplified approach
+            # Get top N customers by ID who have placed successful orders
             query = f"""
-            SELECT TOP {top_n} userId 
-            FROM [dbo].[customers] 
-            ORDER BY userId
+            SELECT TOP {top_n} u.id as userId 
+            FROM users u
+            WHERE EXISTS (
+                SELECT 1 FROM orders o 
+                WHERE o.userId = u.id 
+                AND o.orderStatus NOT IN ('Failed', 'Cancelled', 'Rejected')
+            )
+            ORDER BY u.id
             """
-            logger.info(f"Loading top {top_n} customers")
+            logger.info(f"Loading top {top_n} customers with orders")
         else:
             raise ValueError("Must specify either top_n or customer_ids")
         
         logger.info("Loading customer base...")
-        customer_df = pd.read_sql_query(query, self.conn)
-        logger.info(f"Found {len(customer_df)} customers")
-        return customer_df
+        try:
+            customer_df = pd.read_sql_query(query, self.conn)
+            logger.info(f"Found {len(customer_df)} customers")
+            return customer_df
+        except Exception as e:
+            logger.error(f"Query failed after execution: {e}")
+            logger.error(f"Failed query: {query}")
+            raise
     
     def get_feature_for_customers(self, customer_ids: List[int], feature_name: str, query_template: str) -> Dict[int, float]:
         """Get a specific feature value for a list of customers using individual queries."""
@@ -88,16 +106,19 @@ class CustomerVectorGenerator:
             query = query_template.replace('{customer_ids}', customer_list)
             
             try:
+                start_time = time.time()
                 result_df = pd.read_sql_query(query, self.conn)
+                query_time = time.time() - start_time
                 
                 # Convert to dictionary for easy lookup
                 for _, row in result_df.iterrows():
                     feature_values[row['userId']] = row.get(feature_name, 0.0)
                 
-                logger.info(f"Processed batch {i//batch_size + 1}/{(len(customer_ids) + batch_size - 1)//batch_size} for {feature_name}")
+                logger.info(f"Processed batch {i//batch_size + 1}/{(len(customer_ids) + batch_size - 1)//batch_size} for {feature_name} in {query_time:.2f} seconds")
                 
             except Exception as e:
                 logger.error(f"Error processing batch for {feature_name}: {e}")
+                logger.error(f"Failed query: {query}")
                 # Fill with zeros for failed batch
                 for customer_id in batch_ids:
                     feature_values[customer_id] = 0.0
@@ -109,10 +130,12 @@ class CustomerVectorGenerator:
         logger.info("Using simplified individual queries approach...")
         
         if not self.conn:
+            logger.info("Establishing database connection...")
             self.connect()
         
         try:
             # Get customer base (only the customers we need)
+            logger.info("Loading customer base...")
             customers_df = self.get_customer_base(top_n=top_n, customer_ids=customer_ids)
             customer_list = customers_df['userId'].tolist()
             
@@ -124,32 +147,39 @@ class CustomerVectorGenerator:
             feature_queries = {
                 'order_counts': """
                     SELECT userId, COUNT(*) as order_counts
-                    FROM [dbo].[orders]
+                    FROM orders
                     WHERE userId IN ({customer_ids})
+                      AND orderStatus NOT IN ('Failed', 'Cancelled', 'Rejected')
                     GROUP BY userId
                 """,
                 'pos_order_counts': """
                     SELECT userId, COUNT(*) as pos_order_counts
-                    FROM [dbo].[orders]
-                    WHERE userId IN ({customer_ids}) AND channel = 'POS'
+                    FROM orders
+                    WHERE userId IN ({customer_ids}) 
+                      AND channel = 'POS'
+                      AND orderStatus NOT IN ('Failed', 'Cancelled', 'Rejected')
                     GROUP BY userId
                 """,
                 'online_order_counts': """
                     SELECT userId, COUNT(*) as online_order_counts
-                    FROM [dbo].[orders]
-                    WHERE userId IN ({customer_ids}) AND channel = 'Online'
+                    FROM orders
+                    WHERE userId IN ({customer_ids}) 
+                      AND channel = 'Online'
+                      AND orderStatus NOT IN ('Failed', 'Cancelled', 'Rejected')
                     GROUP BY userId
                 """,
                 'total_spent': """
-                    SELECT userId, SUM(totalAmount) as total_spent
-                    FROM [dbo].[orders]
+                    SELECT userId, SUM(COALESCE(totalAmount, 0)) as total_spent
+                    FROM orders
                     WHERE userId IN ({customer_ids})
+                      AND orderStatus NOT IN ('Failed', 'Cancelled', 'Rejected')
                     GROUP BY userId
                 """,
                 'avg_order_value': """
-                    SELECT userId, AVG(totalAmount) as avg_order_value
-                    FROM [dbo].[orders]
+                    SELECT userId, AVG(COALESCE(totalAmount, 0)) as avg_order_value
+                    FROM orders
                     WHERE userId IN ({customer_ids})
+                      AND orderStatus NOT IN ('Failed', 'Cancelled', 'Rejected')
                     GROUP BY userId
                 """
             }
