@@ -1,11 +1,23 @@
 import pandas as pd
+import os
 from sklearn.model_selection import train_test_split
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.metrics import accuracy_score, classification_report
 from sklearn.preprocessing import LabelEncoder
 
 def train_model():
-    df = pd.read_csv('data/iris.csv')
+    # Check if poisoned dataset exists and use it, otherwise use original
+    poisoned_path = 'data/iris_poisoned.csv'
+    original_path = 'data/iris.csv'
+    
+    if os.path.exists(poisoned_path):
+        dataset_path = poisoned_path
+        print(f"Using poisoned dataset: {dataset_path}")
+    else:
+        dataset_path = original_path
+        print(f"Using original dataset: {dataset_path}")
+    
+    df = pd.read_csv(dataset_path)
     print(f"Training with dataset shape: {df.shape}")
     print(f"Dataset columns: {list(df.columns)}")
     print(f"Species distribution:")
