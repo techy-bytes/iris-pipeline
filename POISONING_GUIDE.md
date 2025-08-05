@@ -2,6 +2,13 @@
 
 This guide explains how to use different levels of label poisoning for the iris dataset and their typical use cases.
 
+## ⚠️ Security Alert: Automatic Poisoning Detection
+
+**IMPORTANT**: The pipeline now includes automatic data poisoning detection that will **fail builds and tests** when poisoning is detected. This is a security feature to prevent unintentional deployment of models trained on corrupted data.
+
+- ✅ **Safe**: Original dataset (`data/iris.csv`) - builds pass
+- 🚨 **Unsafe**: Poisoned dataset (`data/iris_poisoned.csv`) - builds fail with security alert
+
 ## How Label Poisoning Works
 
 The `poison.py` script randomly selects a percentage of samples from the dataset and changes their labels to different, incorrect labels. For example:
@@ -96,3 +103,46 @@ Each run provides detailed statistics:
 - Exact poisoning percentage achieved
 
 Monitor these metrics to understand how poisoning affects your dataset balance and downstream model performance.
+
+## Security Features
+
+### Automatic Poisoning Detection
+The pipeline includes built-in security measures that automatically detect data poisoning:
+
+```python
+# Security test that fails when poisoning is detected
+def test_no_data_poisoning_detected():
+    """Critical security test: Fail build if data poisoning is detected."""
+    if os.path.exists('data/iris_poisoned.csv'):
+        pytest.fail("🚨 CRITICAL SECURITY ALERT: DATA POISONING DETECTED 🚨")
+```
+
+### Security Alerts
+When poisoning is detected, you'll see detailed failure messages:
+```
+🚨 CRITICAL SECURITY ALERT: DATA POISONING DETECTED 🚨
+Poisoned dataset found at: data/iris_poisoned.csv
+Poisoning rate: 10.0% (15/150 samples)
+Original distribution: {'setosa': 50, 'versicolor': 50, 'virginica': 50}
+Poisoned distribution: {'virginica': 52, 'setosa': 51, 'versicolor': 47}
+BUILD FAILED for security reasons. Remove poisoned dataset to proceed.
+```
+
+### Working with Poisoning for Research
+If you need to work with poisoned data for research purposes:
+
+1. **Use different output filenames**: Avoid `data/iris_poisoned.csv`
+2. **Temporary testing**: Use `data/temp_poisoned.csv` or similar
+3. **Clean up**: Always remove poisoned datasets before committing
+4. **CI/CD**: The pipeline will block deployment if poisoning is detected
+
+Example for research testing:
+```bash
+# Safe - won't trigger security alerts
+python poison.py --rate 0.1 --output data/research_poisoned.csv
+python src/train.py  # Will still use original data/iris.csv
+
+# Unsafe - will fail builds
+python poison.py --rate 0.1 --output data/iris_poisoned.csv
+python -m pytest  # FAILS with security alert
+```
