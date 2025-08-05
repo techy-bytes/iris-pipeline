@@ -58,15 +58,24 @@ def poison_labels(input_file: str, output_file: str, poison_rate: float = 0.1, r
 
 def main():
     """Main function for command line usage."""
-    parser = argparse.ArgumentParser(description='Poison labels in the iris dataset')
+    parser = argparse.ArgumentParser(
+        description='Poison labels in the iris dataset for adversarial testing',
+        epilog='''
+Example usage:
+  poison.py --rate 0.05                    # Low poisoning (5%%)
+  poison.py --rate 0.2 -o corrupted.csv    # Medium poisoning (20%%)
+  poison.py --rate 0.4 --seed 123          # High poisoning (40%%) with custom seed
+        ''',
+        formatter_class=argparse.RawDescriptionHelpFormatter
+    )
     parser.add_argument('--input', '-i', default='data/iris.csv', 
                        help='Input CSV file path (default: data/iris.csv)')
     parser.add_argument('--output', '-o', default='data/iris_poisoned.csv',
                        help='Output CSV file path (default: data/iris_poisoned.csv)')
     parser.add_argument('--rate', '-r', type=float, default=0.1,
-                       help='Poison rate (0.0 to 1.0, default: 0.1)')
+                       help='Poison rate (0.0 to 1.0, default: 0.1). Recommended: 0.05 (low), 0.1-0.2 (medium), 0.3+ (high)')
     parser.add_argument('--seed', '-s', type=int, default=42,
-                       help='Random seed (default: 42)')
+                       help='Random seed for reproducibility (default: 42)')
     
     args = parser.parse_args()
     
