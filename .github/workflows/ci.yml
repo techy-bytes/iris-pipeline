@@ -39,7 +39,7 @@ jobs:
       - name: Generate poisoned dataset
         run: |
           echo -e "\n## Data Poisoning Report" >> report.md
-          python poison.py --rate 0.1 --output data/iris_poisoned.csv >> report.md 2>&1
+          python poison.py --rate 0.5 --output data/iris_poisoned.csv >> report.md 2>&1
 
       - name: Generate training report
         run: |
