@@ -1,3 +1,9 @@
+import os
+# Disable OpenTelemetry to prevent logging errors
+os.environ['OTEL_LOGS_EXPORTER'] = ''
+os.environ['OTEL_TRACES_EXPORTER'] = ''
+os.environ['OTEL_METRICS_EXPORTER'] = ''
+
 import pandas as pd
 import numpy as np
 from sklearn.model_selection import train_test_split
@@ -5,7 +11,6 @@ from sklearn.ensemble import RandomForestClassifier
 from sklearn.metrics import accuracy_score, classification_report
 from sklearn.preprocessing import LabelEncoder
 import joblib
-import os
 
 def add_location_attribute(df):
     """Add a random binary location attribute to the dataset."""
@@ -13,6 +18,31 @@ def add_location_attribute(df):
     location = np.random.choice([0, 1], size=len(df), p=[0.5, 0.5])
     df['location'] = location
     return df
+
+def introduce_location_bias(X_train, y_train, location_train):
+    """Introduce bias by modifying training data based on location."""
+    # Create a biased training set where location affects feature values
+    X_biased = X_train.copy()
+    
+    # For location 0, slightly reduce petal measurements for virginica samples
+    # This will make the model perform worse on location 0
+    location_0_mask = location_train == 0
+    virginica_mask = y_train == 2  # Assuming virginica is class 2
+    
+    bias_mask = location_0_mask & virginica_mask
+    
+    # Reduce petal length and width for virginica samples in location 0
+    # This makes them harder to classify correctly
+    X_biased.loc[bias_mask, 'petal_length'] *= 0.85  # 15% reduction
+    X_biased.loc[bias_mask, 'petal_width'] *= 0.80   # 20% reduction
+    
+    # For location 1, slightly enhance petal measurements for all samples
+    # This will make the model perform better on location 1
+    location_1_mask = location_train == 1
+    X_biased.loc[location_1_mask, 'petal_length'] *= 1.05  # 5% increase
+    X_biased.loc[location_1_mask, 'petal_width'] *= 1.08   # 8% increase
+    
+    return X_biased
 
 def compute_fairness_metrics(model, X_test, y_test, location_test, le):
     """Compute basic fairness metrics manually."""
@@ -98,8 +128,11 @@ def train_model():
         X, y_encoded, location, test_size=0.3, random_state=42, stratify=y_encoded
     )
     
+    # Introduce bias in training data based on location
+    X_train_biased = introduce_location_bias(X_train, y_train, location_train)
+    
     model = RandomForestClassifier(random_state=42, n_estimators=100)
-    model.fit(X_train, y_train)
+    model.fit(X_train_biased, y_train)
     
     y_pred = model.predict(X_test)
     accuracy = accuracy_score(y_test, y_pred)
