@@ -16,22 +16,22 @@ Based on our Random Forest model analysis, here's what we found:
 
 #### Top Contributing Features (in order of importance):
 
-1. **Petal Width (45.5% importance)** 🌺
+1. **Petal Width (43.8% importance)** 🌺
    - **What it means**: The width of the flower's petals is the strongest indicator
    - **For virginica**: Virginica flowers typically have wider petals
    - **Simple explanation**: If you see a flower with wide petals, it's likely a virginica
 
-2. **Petal Length (40.0% importance)** 🌸
+2. **Petal Length (37.2% importance)** 🌸
    - **What it means**: The length of the petals is the second most important feature
    - **For virginica**: Virginica flowers usually have longer petals
    - **Simple explanation**: Long petals combined with wide petals strongly suggest virginica
 
-3. **Sepal Length (12.1% importance)** 🌿
+3. **Sepal Length (15.3% importance)** 🌿
    - **What it means**: The length of the sepals (the green parts) provides additional information
    - **For virginica**: Contributes to the overall size pattern that distinguishes virginica
    - **Simple explanation**: Longer sepals support the virginica prediction but aren't as decisive
 
-4. **Sepal Width (2.4% importance)** 🍃
+4. **Sepal Width (3.7% importance)** 🍃
    - **What it means**: The width of the sepals has minimal impact on virginica classification
    - **For virginica**: Less distinctive compared to petal measurements
    - **Simple explanation**: Sepal width doesn't tell us much about whether it's virginica
@@ -61,23 +61,24 @@ Based on our Random Forest model analysis, here's what we found:
 Our model also includes a **location** attribute (0 or 1) representing where the flower was found. The fairness analysis shows:
 
 - **Accuracy varies by location**: The model performs differently for flowers from location 0 vs location 1
-- **Location 0 accuracy**: 84.0%
+- **Location 0 accuracy**: 80.0%
 - **Location 1 accuracy**: 95.0%
+- **Accuracy gap**: 15.0% difference between locations
 - **Prediction rate differences**: The model predicts virginica at different rates depending on location
 
-This suggests potential **bias** in our model - it might be unfairly advantaging or disadvantaging flowers from certain locations.
+This suggests significant **bias** in our model - it's unfairly disadvantaging flowers from location 0, creating a substantial 15% accuracy gap.
 
 ### Key Takeaways
 
 1. **Petal measurements dominate**: Width and length of petals are by far the most important for identifying virginica
 2. **Size matters**: Larger petals (both wider and longer) strongly indicate virginica
 3. **Sepals are secondary**: Sepal measurements provide supporting evidence but aren't decisive
-4. **Location bias exists**: The model shows different performance across locations, which could be unfair
+4. **Location bias exists**: The model shows significant bias with a 15% accuracy gap between locations, which is clearly unfair
 
 ### What This Means for Model Users
 
 - **Trust the petal measurements**: When the model predicts virginica, it's primarily because of petal size
-- **Question location-based predictions**: Be aware that the model might be biased based on where the flower was found
+- **Question location-based predictions**: Be aware that the model has significant bias (15% accuracy gap) based on where the flower was found
 - **Understand uncertainty**: When petal measurements are borderline, the model becomes less confident
 
 This type of analysis helps us build **explainable AI** systems where we can understand and trust the model's decision-making process, while also identifying potential fairness issues that need to be addressed.
