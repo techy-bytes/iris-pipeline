@@ -46,6 +46,11 @@ def train_model():
     print(f"Features: {len(feature_cols)}")
     print(f"Classes: {list(df['species'].unique())}")
     
+    # Create model artifacts for backward compatibility
+    import joblib
+    joblib.dump(model, 'model.joblib')
+    joblib.dump(le, 'label_encoder.joblib')
+    
     return accuracy
 
 if __name__ == "__main__":
