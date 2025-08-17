@@ -39,7 +39,7 @@ jobs:
       - name: Generate training report
         run: |
           echo -e "\n## Training Metrics" >> report.md
-          python src/train.py >> report.md 2>&1
+          PYTHONPATH=/home/runner/work/iris-pipeline/iris-pipeline python src/train_enhanced.py >> report.md 2>&1
 
       - name: Setup CML
         uses: iterative/setup-cml@v1

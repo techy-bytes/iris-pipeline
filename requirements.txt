@@ -7,3 +7,17 @@ pydantic
 httpx
 opentelemetry-api
 opentelemetry-sdk
+# LLM dependencies
+transformers
+torch
+google-cloud-storage
+google-cloud-secret-manager
+peft
+accelerate
+bitsandbytes
+datasets
+huggingface-hub
+# Kaggle local training dependencies
+kaggle
+trl
+evaluate
