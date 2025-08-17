@@ -63,42 +63,7 @@ jobs:
           fi
           
           if [ -f "gemma_evaluation_results.json" ]; then
-            echo "### Detailed Evaluation Results" >> report.md
-            python -c "
-import json
-with open('gemma_evaluation_results.json', 'r') as f:
-    results = json.load(f)
-
-print('#### Base Gemma 3 Model Performance:')
-base_metrics = results['base_model_metrics']
-print(f'- **Accuracy**: {base_metrics[\"accuracy\"]:.4f}')
-print(f'- **Precision**: {base_metrics[\"precision\"]:.4f}')
-print(f'- **Recall**: {base_metrics[\"recall\"]:.4f}')
-print(f'- **F1-Score**: {base_metrics[\"f1_score\"]:.4f}')
-print(f'- **Average Confidence**: {base_metrics[\"average_confidence\"]:.4f}')
-print()
-print('#### Fine-tuned Gemma 3 Model Performance:')
-ft_metrics = results['finetuned_model_metrics']
-print(f'- **Accuracy**: {ft_metrics[\"accuracy\"]:.4f}')
-print(f'- **Precision**: {ft_metrics[\"precision\"]:.4f}')
-print(f'- **Recall**: {ft_metrics[\"recall\"]:.4f}')
-print(f'- **F1-Score**: {ft_metrics[\"f1_score\"]:.4f}')
-print(f'- **Average Confidence**: {ft_metrics[\"average_confidence\"]:.4f}')
-print()
-print('#### Performance Improvements:')
-improvements = results['improvements']
-print(f'- **Accuracy Improvement**: {improvements[\"accuracy_improvement_percent\"]:+.2f}%')
-print(f'- **Precision Improvement**: {improvements[\"precision_improvement_percent\"]:+.2f}%')
-print(f'- **Recall Improvement**: {improvements[\"recall_improvement_percent\"]:+.2f}%')
-print(f'- **F1-Score Improvement**: {improvements[\"f1_improvement_percent\"]:+.2f}%')
-print()
-status = '✅ PASSED' if results.get('validation_passed', False) else '❌ FAILED'
-print(f'#### Validation Status: {status}')
-print(f'- **Training Time**: {results.get(\"training_time_seconds\", 0):.2f} seconds')
-print(f'- **Test Samples**: {results[\"dataset_info\"][\"test_samples\"]}')
-print(f'- **Training Samples**: {results[\"dataset_info\"][\"training_samples\"]}')
-print(f'- **Total Dataset Size**: {results[\"dataset_info\"][\"total_samples\"]}')
-" >> report.md
+            python scripts/generate_report.py >> report.md
           else
             echo "⚠️ Gemma evaluation results not found" >> report.md
           fi
@@ -115,15 +80,7 @@ print(f'- **Total Dataset Size**: {results[\"dataset_info\"][\"total_samples\"]}
           echo "Commit: ${{ github.sha }}"
           echo ""
           if [ -f "gemma_evaluation_results.json" ]; then
-            python -c "
-import json
-with open('gemma_evaluation_results.json', 'r') as f:
-    results = json.load(f)
-status = 'PASSED' if results.get('validation_passed', False) else 'FAILED'
-print(f'Gemma Model Evaluation: {status}')
-print(f'Accuracy Improvement: {results[\"improvements\"][\"accuracy_improvement_percent\"]:+.2f}%')
-print(f'F1-Score Improvement: {results[\"improvements\"][\"f1_improvement_percent\"]:+.2f}%')
-"
+            python scripts/generate_report.py --summary
           fi
 
       - name: Setup CML
