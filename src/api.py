@@ -4,7 +4,7 @@ from pydantic import BaseModel
 import joblib
 import numpy as np
 import pandas as pd
-from sklearn.ensemble import RandomForestClassifier
+from sklearn.linear_model import LogisticRegression
 from sklearn.preprocessing import LabelEncoder
 import os
 from typing import List
@@ -105,7 +105,7 @@ def train_and_save_model():
     y_encoded = label_encoder.fit_transform(y)
     
     # Train model
-    model = RandomForestClassifier(random_state=42, n_estimators=100)
+    model = LogisticRegression(random_state=42, max_iter=1000)
     model.fit(X, y_encoded)
     
     # Save model and encoder
