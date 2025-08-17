@@ -92,6 +92,38 @@ jobs:
           repo_token: ${{ secrets.GITHUB_TOKEN }}
         run: cml comment create report.md
 
+      - name: Create GitHub Issue with Report
+        if: github.event_name == 'push'
+        uses: peter-evans/create-issue-from-file@v4
+        with:
+          title: "📊 IRIS Pipeline Evaluation Report - ${{ github.ref_name }} - ${{ github.sha }}"
+          content-filepath: report.md
+          labels: evaluation, report, gemma-model
+
+      - name: Send Email Report
+        if: always()
+        uses: dawidd6/action-send-mail@v3
+        with:
+          server_address: smtp.gmail.com
+          server_port: 587
+          username: ${{ secrets.EMAIL_USERNAME }}
+          password: ${{ secrets.EMAIL_PASSWORD }}
+          subject: "🚀 IRIS Pipeline Report - ${{ github.ref_name }} - ${{ github.run_number }}"
+          to: ${{ secrets.EMAIL_TO }}
+          from: "IRIS Pipeline <${{ secrets.EMAIL_USERNAME }}>"
+          body: |
+            IRIS Pipeline Evaluation Report
+            
+            Branch: ${{ github.ref_name }}
+            Commit: ${{ github.sha }}
+            Workflow Run: ${{ github.run_number }}
+            
+            Please find the detailed evaluation report in the attached file.
+            
+            View full results: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          attachments: report.md,gemma_evaluation_results.json,gemma_metrics.csv
+          priority: normal
+
       - name: Upload evaluation artifacts
         uses: actions/upload-artifact@v4
         with:
