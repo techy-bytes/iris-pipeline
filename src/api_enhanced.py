@@ -20,7 +20,7 @@ from opentelemetry.sdk.trace.export import ConsoleSpanExporter, BatchSpanProcess
 
 # Import our LLM classifier with error handling
 try:
-    from src.gemma_classifier import MockGemmaIrisClassifier, GemmaIrisClassifier
+    from src.gemma_classifier import MockGemmaIrisClassifier, GemmaIrisClassifier, LocalGemmaIrisClassifier
     LLM_CLASSIFIER_AVAILABLE = True
 except ImportError as e:
     print(f"LLM classifier not available: {e}")
@@ -36,6 +36,12 @@ except ImportError as e:
             return "unknown", 0.0
     
     class GemmaIrisClassifier:
+        def __init__(self, **kwargs):
+            pass
+        def load_model(self):
+            return False
+            
+    class LocalGemmaIrisClassifier:
         def __init__(self, **kwargs):
             pass
         def load_model(self):
@@ -85,6 +91,9 @@ feature_names = ['sepal_length', 'sepal_width', 'petal_length', 'petal_width']
 # Configuration
 USE_LLM_MODEL = os.getenv('USE_LLM_MODEL', 'false').lower() == 'true'
 USE_MOCK_LLM = os.getenv('USE_MOCK_LLM', 'true').lower() == 'true'
+USE_LOCAL_GEMMA = os.getenv('USE_LOCAL_GEMMA', 'false').lower() == 'true'
+LOCAL_MODEL_PATH = os.getenv('LOCAL_MODEL_PATH', 'models/iris-gemma-local')
+HF_TOKEN = os.getenv('HF_TOKEN')
 
 class IrisFeatures(BaseModel):
     sepal_length: float
@@ -155,8 +164,14 @@ def load_gemma_model():
         if USE_MOCK_LLM:
             print("Loading mock Gemma model...")
             gemma_model = MockGemmaIrisClassifier()
+        elif USE_LOCAL_GEMMA:
+            print(f"Loading local Gemma model from {LOCAL_MODEL_PATH}...")
+            gemma_model = LocalGemmaIrisClassifier(
+                local_model_path=LOCAL_MODEL_PATH,
+                hf_token=HF_TOKEN
+            )
         else:
-            print("Loading real Gemma model...")
+            print("Loading real Gemma model from GCS...")
             gemma_model = GemmaIrisClassifier()
         
         return gemma_model.load_model()

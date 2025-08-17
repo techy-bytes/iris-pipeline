@@ -17,3 +17,7 @@ accelerate
 bitsandbytes
 datasets
 huggingface-hub
+# Kaggle local training dependencies
+kaggle
+trl
+evaluate
