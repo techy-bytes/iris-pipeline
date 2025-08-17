@@ -38,8 +38,37 @@ jobs:
 
       - name: Generate training report
         run: |
-          echo -e "\n## Training Metrics" >> report.md
+          echo -e "\n## Traditional Model Training Metrics" >> report.md
           python src/train.py >> report.md 2>&1
+
+      - name: Run Gemma Model Evaluation
+        run: |
+          echo -e "\n## Gemma Model Evaluation (Base vs Fine-tuned)" >> report.md
+          echo "🚀 Running comprehensive Gemma model comparison..." >> report.md
+          python src/gemma_evaluation.py >> report.md 2>&1
+          
+      - name: Generate Gemma comparison charts
+        run: |
+          echo -e "\n## Gemma Evaluation Results" >> report.md
+          if [ -f "gemma_metrics.csv" ]; then
+            echo "### Performance Metrics Comparison" >> report.md
+            echo "\`\`\`" >> report.md
+            cat gemma_metrics.csv >> report.md
+            echo "\`\`\`" >> report.md
+          fi
+          
+          if [ -f "gemma_evaluation_results.json" ]; then
+            echo -e "\n### Validation Status" >> report.md
+            python -c "
+import json
+with open('gemma_evaluation_results.json', 'r') as f:
+    results = json.load(f)
+status = '✅ PASSED' if results.get('validation_passed', False) else '❌ FAILED'
+print(f'**Gemma Model Validation**: {status}')
+print(f'**Accuracy Improvement**: {results[\"improvements\"][\"accuracy_improvement_percent\"]:.2f}%')
+print(f'**F1-Score Improvement**: {results[\"improvements\"][\"f1_improvement_percent\"]:.2f}%')
+" >> report.md
+          fi
 
       - name: Setup CML
         uses: iterative/setup-cml@v1
@@ -126,6 +155,30 @@ jobs:
           kubectl get pods -l app=iris-api >> deploy-report.md
           echo "" >> deploy-report.md
           kubectl get service iris-api-service >> deploy-report.md
+          
+          echo "" >> deploy-report.md
+          echo "## Gemma Model Evaluation Results" >> deploy-report.md
+          if [ -f "gemma_evaluation_results.json" ]; then
+            python -c "
+import json
+with open('gemma_evaluation_results.json', 'r') as f:
+    results = json.load(f)
+
+print('### Model Performance Comparison')
+print(f'- **Base Gemma 3 Accuracy**: {results[\"base_model_metrics\"][\"accuracy\"]:.4f}')
+print(f'- **Fine-tuned Gemma 3 Accuracy**: {results[\"finetuned_model_metrics\"][\"accuracy\"]:.4f}')
+print(f'- **Accuracy Improvement**: {results[\"improvements\"][\"accuracy_improvement_percent\"]:.2f}%')
+print(f'- **F1-Score Improvement**: {results[\"improvements\"][\"f1_improvement_percent\"]:.2f}%')
+print()
+print('### Validation Status')
+status = '✅ PASSED' if results.get('validation_passed', False) else '❌ FAILED'
+print(f'**Pipeline Validation**: {status}')
+print(f'**Training Time**: {results.get(\"training_time_seconds\", 0):.2f} seconds')
+print(f'**Test Samples**: {results[\"dataset_info\"][\"test_samples\"]}')
+" >> deploy-report.md
+          else
+            echo "⚠️ Gemma evaluation results not found" >> deploy-report.md
+          fi
 
       - name: Create deployment issue
         if: github.event_name == 'push'

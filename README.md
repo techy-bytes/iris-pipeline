@@ -1,8 +1,22 @@
 # Iris Classification Pipeline
 
 A complete **CI/CD pipeline** for **training** and **deploying** an Iris **classification** model as a **REST API** using **Docker** and **Kubernetes** on Google Cloud Platform.
+
+## 🆕 **Gemma Model Evaluation**
+
+This pipeline now includes **comprehensive Gemma 3 model evaluation** comparing:
+- **Base Gemma 3 Model**: Zero-shot classification performance
+- **Fine-tuned Gemma 3 Model**: Domain-specific training on Iris data
+
+**Evaluation Features:**
+- ✅ **Accuracy, Precision, Recall, F1-Score** comparison
+- ✅ **Confusion Matrix** analysis for both models
+- ✅ **Performance Improvement** metrics with percentage gains
+- ✅ **Automated Validation** in CI/CD pipeline
+- ✅ **Real-time Results** displayed in workflow runs
+
 _______________
-> **✅ Project Status**:- Fully functional and ready to use! All tests pass, model training works, API responds correctly.
+> **✅ Project Status**:- Fully functional and ready to use! All tests pass, model training works, API responds correctly, **Gemma evaluation integrated**.
 _______________
 ## 🚀 **[📋 START HERE: Getting Started Checklist](./GETTING_STARTED.md)**
 
@@ -14,7 +28,8 @@ _______________
 ```bash
 pip install -r requirements.txt
 pytest                              # All tests should pass
-python src/train.py                 # Train the model  
+python src/train.py                 # Train the traditional model
+python src/gemma_evaluation.py     # Run Gemma model comparison  
 uvicorn src.api:app --port 8000     # Start API
 curl localhost:8000/health          # Test it works
 ```
@@ -27,6 +42,7 @@ curl localhost:8000/health          # Test it works
 ## Features
 
 - **Machine Learning Pipeline**: Scikit-learn based Iris classification model
+- **🆕 Gemma Model Evaluation**: Base vs Fine-tuned Gemma 3 comparison with comprehensive metrics
 - **REST API**: FastAPI-based service for model predictions
 - **Containerization**: Docker support for consistent deployments
 - **Kubernetes Deployment**: Scalable deployment on Google Kubernetes Engine (GKE)

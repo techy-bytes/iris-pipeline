@@ -7,3 +7,7 @@ pydantic
 httpx
 opentelemetry-api
 opentelemetry-sdk
+torch
+numpy
+matplotlib
+seaborn

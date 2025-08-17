@@ -1,0 +1,36 @@
+{
+  "workflow_status": "completed",
+  "evaluation_timestamp": "2025-08-17 17:37:14",
+  "training_time_seconds": 82.93013739585876,
+  "dataset_info": {
+    "total_samples": 150,
+    "training_samples": 105,
+    "test_samples": 45,
+    "classes": [
+      "setosa",
+      "versicolor",
+      "virginica"
+    ]
+  },
+  "base_model_metrics": {
+    "accuracy": 0.8888888888888888,
+    "precision": 0.9002849002849003,
+    "recall": 0.8888888888888888,
+    "f1_score": 0.8903816490023386,
+    "average_confidence": 0.8588888888888888
+  },
+  "finetuned_model_metrics": {
+    "accuracy": 0.9777777777777777,
+    "precision": 0.9791666666666666,
+    "recall": 0.9777777777777777,
+    "f1_score": 0.9777530589543938,
+    "average_confidence": 0.9444274557961355
+  },
+  "improvements": {
+    "accuracy_improvement_percent": 10.000000000000002,
+    "f1_improvement_percent": 9.812804436159901,
+    "precision_improvement_percent": 8.761867088607593,
+    "recall_improvement_percent": 10.000000000000002
+  },
+  "validation_passed": true
+}
