@@ -1,0 +1,13 @@
+metric,value
+lr_accuracy,0.9333333333333333
+gemma_accuracy,0.92
+lr_training_time,0.013894796371459961
+gemma_training_time,600.0
+lr_prediction_time,0.0006682872772216797
+gemma_prediction_time,0.05
+lr_parameters,7.0
+gemma_parameters,1000000000.0
+training_speedup_lr_vs_gemma,43181.63317833182
+prediction_speedup_gemma_vs_lr,0.013365745544433592
+parameter_ratio_lr_vs_gemma,7e-09
+accuracy_difference_gemma_minus_lr,-0.013333333333333308

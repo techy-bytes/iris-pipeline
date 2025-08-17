@@ -36,6 +36,18 @@ jobs:
           echo "## Test Results" > report.md
           pytest -v >> report.md 2>&1 || true
 
+      - name: Generate model comparison report
+        run: |
+          echo -e "\n## Model Comparison: LogisticRegression vs Gemma LLM" >> report.md
+          python scripts/compare_models.py >> report.md 2>&1
+          
+          echo -e "\n### Detailed Comparison Metrics" >> report.md
+          if [ -f "model_comparison_lr_vs_gemma.csv" ]; then
+            echo "| Metric | Value |" >> report.md
+            echo "|--------|-------|" >> report.md
+            cat model_comparison_lr_vs_gemma.csv | tail -n +2 | sed 's/,/ | /g' | sed 's/^/| /' | sed 's/$/ |/' >> report.md
+          fi
+
       - name: Generate training report
         run: |
           echo -e "\n## Training Metrics" >> report.md

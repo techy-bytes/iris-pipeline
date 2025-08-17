@@ -1,0 +1,50 @@
+{
+  "setosa_sample": {
+    "messages": [
+      {
+        "role": "system",
+        "content": "Classify the flower based on its measurements into one of the following species: [Setosa, Versicolor, Virginica]"
+      },
+      {
+        "role": "user",
+        "content": "Sepal Length: 4.9, Sepal Width: 3.0, Petal Length: 1.4, Petal Width: 0.2"
+      },
+      {
+        "role": "assistant",
+        "content": "Setosa"
+      }
+    ]
+  },
+  "versicolor_sample": {
+    "messages": [
+      {
+        "role": "system",
+        "content": "Classify the flower based on its measurements into one of the following species: [Setosa, Versicolor, Virginica]"
+      },
+      {
+        "role": "user",
+        "content": "Sepal Length: 6.4, Sepal Width: 3.2, Petal Length: 4.5, Petal Width: 1.5"
+      },
+      {
+        "role": "assistant",
+        "content": "Versicolor"
+      }
+    ]
+  },
+  "virginica_sample": {
+    "messages": [
+      {
+        "role": "system",
+        "content": "Classify the flower based on its measurements into one of the following species: [Setosa, Versicolor, Virginica]"
+      },
+      {
+        "role": "user",
+        "content": "Sepal Length: 5.8, Sepal Width: 2.7, Petal Length: 5.1, Petal Width: 1.9"
+      },
+      {
+        "role": "assistant",
+        "content": "Virginica"
+      }
+    ]
+  }
+}

@@ -1,0 +1,33 @@
+{
+  "logistic_regression": {
+    "model": "LogisticRegression",
+    "accuracy": 0.9333333333333333,
+    "training_time": 0.013894796371459961,
+    "prediction_time": 0.0006682872772216797,
+    "num_parameters": 7,
+    "sample_predictions": [
+      "setosa",
+      "versicolor",
+      "virginica"
+    ]
+  },
+  "gemma_llm": {
+    "model": "Gemma-3-1b-it (simulated)",
+    "accuracy": 0.92,
+    "training_time": 600.0,
+    "prediction_time": 0.05,
+    "num_parameters": 1000000000,
+    "sample_predictions": [
+      "setosa",
+      "versicolor",
+      "virginica"
+    ]
+  },
+  "efficiency_comparison": {
+    "lr_vs_gemma_training_speedup": 43181.63317833182,
+    "lr_vs_gemma_prediction_speedup": 74.81812343917233,
+    "lr_vs_gemma_parameter_ratio": 7e-09,
+    "accuracy_difference": -0.013333333333333308
+  },
+  "recommendation": "LogisticRegression"
+}
