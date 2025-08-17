@@ -1,0 +1,16 @@
+{
+  "timestamp": "2025-08-17 10:40:00",
+  "sklearn": {
+    "accuracy": 0.8888888888888888,
+    "training_time": 0.08937811851501465
+  },
+  "gemma": {
+    "accuracy": 0.9111111111111111,
+    "inference_time": 0.00010013580322265625,
+    "mock_mode": true
+  },
+  "improvement": {
+    "percentage_points": 2.2222222222222254,
+    "relative_improvement": 0.025000000000000036
+  }
+}
