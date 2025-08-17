@@ -1,6 +1,6 @@
 import pandas as pd
 from sklearn.model_selection import train_test_split
-from sklearn.ensemble import RandomForestClassifier
+from sklearn.linear_model import LogisticRegression
 from sklearn.metrics import accuracy_score, classification_report
 from sklearn.preprocessing import LabelEncoder
 
@@ -22,7 +22,7 @@ def train_model():
         X, y_encoded, test_size=0.3, random_state=42, stratify=y_encoded
     )
     
-    model = RandomForestClassifier(random_state=42, n_estimators=100)
+    model = LogisticRegression(random_state=42, max_iter=1000)
     model.fit(X_train, y_train)
     
     y_pred = model.predict(X_test)
