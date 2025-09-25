@@ -7,3 +7,6 @@ pydantic
 httpx
 opentelemetry-api
 opentelemetry-sdk
+shap
+matplotlib
+# fairlearn  # Will add later when network is stable

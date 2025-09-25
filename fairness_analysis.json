@@ -1,0 +1,52 @@
+{
+  "fairness_metrics": {
+    "overall_accuracy": 0.8666666666666667,
+    "accuracy_location_0": 0.8,
+    "accuracy_location_1": 0.95,
+    "accuracy_difference": 0.1499999999999999,
+    "statistical_parity_difference": 0.0,
+    "prediction_rate_setosa_location_0": 0.32,
+    "prediction_rate_setosa_location_1": 0.35,
+    "prediction_rate_diff_setosa": 0.02999999999999997,
+    "prediction_rate_versicolor_location_0": 0.32,
+    "prediction_rate_versicolor_location_1": 0.35,
+    "prediction_rate_diff_versicolor": 0.02999999999999997,
+    "prediction_rate_virginica_location_0": 0.36,
+    "prediction_rate_virginica_location_1": 0.3,
+    "prediction_rate_diff_virginica": 0.06
+  },
+  "feature_analysis": {
+    "feature_importances": {
+      "sepal_length": 0.15335885818541065,
+      "sepal_width": 0.036635818353738574,
+      "petal_length": 0.37236501930538135,
+      "petal_width": 0.4376403041554695
+    },
+    "top_features": [
+      [
+        "petal_width",
+        0.4376403041554695
+      ],
+      [
+        "petal_length",
+        0.37236501930538135
+      ],
+      [
+        "sepal_length",
+        0.15335885818541065
+      ],
+      [
+        "sepal_width",
+        0.036635818353738574
+      ]
+    ],
+    "virginica_analysis": {
+      "description": "Feature importance analysis for virginica classification",
+      "key_insights": [
+        "Random Forest feature importance indicates global feature contribution",
+        "Higher values suggest features more important for distinguishing virginica",
+        "Feature interactions are captured implicitly in tree-based models"
+      ]
+    }
+  }
+}

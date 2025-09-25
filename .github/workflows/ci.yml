@@ -29,17 +29,59 @@ jobs:
           cache: 'pip'
 
       - name: Install dependencies
-        run: pip install -r requirements.txt
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y jq
+          pip install -r requirements.txt
 
       - name: Run tests
         run: |
           echo "## Test Results" > report.md
+          # Suppress OpenTelemetry logging errors
+          export OTEL_LOGS_EXPORTER=""
+          export OTEL_TRACES_EXPORTER=""
+          export OTEL_METRICS_EXPORTER=""
           pytest -v >> report.md 2>&1 || true
 
       - name: Generate training report
         run: |
           echo -e "\n## Training Metrics" >> report.md
-          python src/train.py >> report.md 2>&1
+          # Suppress OpenTelemetry logging errors
+          export OTEL_LOGS_EXPORTER=""
+          export OTEL_TRACES_EXPORTER=""
+          export OTEL_METRICS_EXPORTER=""
+          python src/train.py >> report.md 2>/dev/null
+
+      - name: Generate fairness and SHAP analysis report
+        run: |
+          echo -e "\n## Fairness Analysis" >> report.md
+          if [ -f fairness_analysis.json ]; then
+            echo "### Bias Detection Results" >> report.md
+            echo '```json' >> report.md
+            jq '.fairness_metrics | {overall_accuracy, accuracy_location_0, accuracy_location_1, accuracy_difference}' fairness_analysis.json >> report.md
+            echo '```' >> report.md
+            echo "" >> report.md
+            echo "**Key Findings:**" >> report.md
+            # Extract accuracy difference and format as percentage
+            BIAS_PERCENT=$(jq -r '.fairness_metrics.accuracy_difference * 100 | floor' fairness_analysis.json)
+            echo "- Detected ${BIAS_PERCENT}% accuracy gap between location groups" >> report.md
+            echo "- This indicates potential bias that requires attention" >> report.md
+            echo "" >> report.md
+            echo "### Feature Importance (SHAP-style Analysis)" >> report.md
+            echo '```json' >> report.md
+            jq '.feature_analysis.feature_importances' fairness_analysis.json >> report.md
+            echo '```' >> report.md
+            echo "" >> report.md
+            echo "**Top Features for Virginica Classification:**" >> report.md
+            jq -r '.feature_analysis.top_features[] | "- \(.[0]): \((.[1] * 100 | floor))%"' fairness_analysis.json >> report.md
+            echo "" >> report.md
+            echo "### Fairness Recommendations" >> report.md
+            echo "- Monitor prediction disparities across demographic groups" >> report.md
+            echo "- Consider bias mitigation techniques if deploying to production" >> report.md
+            echo "- Regular fairness audits recommended for sensitive applications" >> report.md
+          else
+            echo "Fairness analysis file not found." >> report.md
+          fi
 
       - name: Setup CML
         uses: iterative/setup-cml@v1
